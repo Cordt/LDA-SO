@@ -1,0 +1,257 @@
+__author__ = 'Cordt Voigt'
+
+import xml.etree.cElementTree as ElementTree
+import sqlite3
+import os.path
+import re
+
+
+class Importer:
+
+    def __init__(self, setting):
+        # Instance variables
+        self.setting = setting
+        self.corpus = []
+
+    def importxmldata(self):
+        self._createdb()
+        self._importtags()
+        self._importposts()
+        self._importlinks()
+        self._importusers()
+        self._getcorpus()
+        return self.corpus
+
+    def _getcorpus(self):
+        print("Loading questions...")
+        sql = 'SELECT body FROM question'
+        self.cursor.execute(sql)
+        questions = self.cursor.fetchall()
+        for row in questions:
+            # Append document to corpus
+            self.corpus.append(row[0])
+
+        print("Loading answers...")
+        sql = 'SELECT body FROM answer'
+        self.cursor.execute(sql)
+        answers = self.cursor.fetchall()
+        for row in answers:
+            # Append document to corpus
+            self.corpus.append(row[0])
+
+        self.connection.close()
+
+    def _createdb(self):
+        # Create tables if database does not exist yet
+        if not os.path.isfile(self.setting['dbpath']):
+            print("Database does not exist yet, creating...")
+
+            # Database connection - instance variables
+            self.connection = sqlite3.connect(self.setting['dbpath'])
+            self.cursor = self.connection.cursor()
+
+            # Create question table
+            sql = 'CREATE TABLE question (elementId int, creationDate int, score int, body text, ownerUserId int, \
+                   lastActivityDate int, commentCount int, acceptedAnswerId int, viewCount int, title text, \
+                   answerCount int)'
+            self.cursor.execute(sql)
+
+            # Create answer table
+            sql = 'CREATE TABLE answer (elementId int, creationDate int, score int, body text, ownerUserId int, \
+                   lastActivityDate int, commentCount int, questionId int, lastEditorUserId int, lastEditDate int)'
+            self.cursor.execute(sql)
+
+            # Create postLink table
+            # LinkTypeId:
+            # 1: Mutual reference
+            # 2: ??
+            # 3: Marked as duplicate, referencing to duplicate question
+            sql = 'CREATE TABLE postLink (elementId int, creationDate int, postId int, relatedPostId int, \
+                   linkTypeId int)'
+            self.cursor.execute(sql)
+
+            # Create tag table
+            sql = 'CREATE TABLE tag (elementId int, tagName text, count int)'
+            self.cursor.execute(sql)
+
+            # Create postTag table
+            sql = 'CREATE TABLE postTag (questionId int, tagId int)'
+            self.cursor.execute(sql)
+
+            # Create user table
+            sql = 'CREATE TABLE user (elementId int, reputation int, creationDate int, displayName text, \
+                   lastAccessDate int, websiteUrl text, location text, aboutMe text, views int, upVotes int, \
+                   downVotes int, profileImageUrl text, age int, accountId int)'
+            self.cursor.execute(sql)
+
+            self.connection.commit()
+
+        else:
+            # Database connection - instance variables
+            self.connection = sqlite3.connect(self.setting['dbpath'])
+            self.cursor = self.connection.cursor()
+
+            print("Database already exists, connecting...")
+
+    def _importposts(self):
+        tree = ElementTree.parse(self.setting['folderprefix'] + 'Posts.xml')
+        root = tree.getroot()
+
+        # Check whether database is empty
+        sql = '''SELECT * FROM question'''
+        self.cursor.execute(sql)
+        result = self.cursor.fetchall()
+        sql = '''SELECT * FROM answer'''
+        self.cursor.execute(sql)
+        result2 = self.cursor.fetchall()
+
+        if len(result) != 0 or len(result2) != 0:
+            print('Question and Answer tables not empty, adding nothing')
+
+        else:
+            print('Importing posts into question and answer tables')
+            for row in root.findall('row'):
+
+                # Common attributes
+                elementid = row.get('Id')
+                creationdate = row.get('CreationDate')
+                score = row.get('Score')
+                body = row.get('Body')
+                owneruserid = row.get('OwnerUserId')
+                lastactivitydate = row.get('LastActivityDate')
+                commentcount = row.get('CommentCount')
+
+                if row.get('PostTypeId') == '1':
+                    acceptedanswerid = row.get('AcceptedAnswerId')
+                    viewcount = row.get('ViewCount')
+                    title = row.get('Title')
+                    tags = row.get('Tags')
+                    # Add tags for question
+                    self._inserttagsforpost(tags, elementid)
+                    answercount = row.get('AnswerCount')
+                    values = [elementid, creationdate, score, body, owneruserid, lastactivitydate, commentcount,
+                              acceptedanswerid, viewcount, title, answercount]
+
+                    self.cursor.execute('INSERT INTO question VALUES (?, strftime(\'%s\', ?), ?, ?, ?, \
+                                         strftime(\'%s\', ?), ?, ?, ?, ?, ?)', values)
+
+                else:
+                    questionid = row.get('ParentId')
+                    lasteditoruserid = row.get('LastEditorUserId')
+                    lasteditdate = row.get('LastEditDate')
+                    values = [elementid, creationdate, score, body, owneruserid, lastactivitydate, commentcount,
+                              questionid, lasteditoruserid, lasteditdate]
+
+                    self.cursor.execute('INSERT INTO answer VALUES (?, strftime(\'%s\', ?), ?, ?, ?, \
+                                         strftime(\'%s\', ?), ?, ?, ?, ?)', values)
+
+            self.connection.commit()
+
+    # Must be called before importposts
+    def _importtags(self):
+        tree = ElementTree.parse(self.setting['folderprefix'] + 'Tags.xml')
+        root = tree.getroot()
+
+        # Check whether database is empty
+        sql = 'SELECT * FROM tag'
+        self.cursor.execute(sql)
+        result = self.cursor.fetchall()
+
+        if len(result) != 0:
+            print('Tag table not empty, adding nothing')
+
+        else:
+            print('Importing tags into tag table')
+            for row in root.findall('row'):
+
+                elementid = row.get('Id')
+                tagname = row.get('TagName')
+                count = row.get('Count')
+
+                values = [elementid, tagname, count]
+                self.cursor.execute('INSERT INTO tag VALUES (?, ?, ?)', values)
+
+            self.connection.commit()
+
+    # Used in importposts, do not use anywhere else
+    def _inserttagsforpost(self, tags, questionid):
+        regex = re.compile('(<.+?>)')
+        for tag in regex.findall(tags):
+            # Get tag ID
+            tag = tag.replace('<', '')
+            tag = tag.replace('>', '')
+            tag = (tag,)
+            self.cursor.execute('SELECT elementId FROM tag WHERE tagName=?', tag)
+            row = self.cursor.fetchone()
+            if row is not None:
+                tagid = row[0]
+                values = [questionid, tagid]
+                self.cursor.execute('INSERT INTO postTag VALUES (?, ?)', values)
+            else:
+                print('No tag record found for ', tag)
+
+    def _importlinks(self):
+        tree = ElementTree.parse(self.setting['folderprefix'] + 'PostLinks.xml')
+        root = tree.getroot()
+
+        # Check whether database is empty
+        sql = 'SELECT * FROM postLink'
+        self.cursor.execute(sql)
+        result = self.cursor.fetchall()
+
+        if len(result) != 0:
+            print('PostLink table not empty, adding nothing')
+
+        else:
+            print('Importing links into postLink table')
+            for row in root.findall('row'):
+
+                elementid = row.get('Id')
+                creationdate = row.get('CreationDate')
+                postid = row.get('PostId')
+                relatedpostid = row.get('RelatedPostId')
+                linktypeid = row.get('LinkTypeId')
+
+                values = [elementid, creationdate, postid, relatedpostid, linktypeid]
+                self.cursor.execute('INSERT INTO postLink VALUES (?, strftime(\'%s\', ?), ?, ?, ?)', values)
+
+            self.connection.commit()
+
+    def _importusers(self):
+        tree = ElementTree.parse(self.setting['folderprefix'] + 'Users.xml')
+        root = tree.getroot()
+
+        # Check whether database is empty
+        sql = '''SELECT * FROM user'''
+        self.cursor.execute(sql)
+        result = self.cursor.fetchall()
+
+        if len(result) != 0:
+            print('User table not empty, adding nothing')
+
+        else:
+            print('Importing users into user table')
+            for row in root.findall('row'):
+
+                elementid = row.get('Id')
+                reputation = row.get('CreationDate')
+                creationdate = row.get('CreationDate')
+                displayname = row.get('DisplayName')
+                lastaccessdate = row.get('LastAccessDate')
+                websiteurl = row.get('WebsiteUrl')
+                location = row.get('Location')
+                aboutme = row.get('AboutMe')
+                views = row.get('Views')
+                upvotes = row.get('UpVotes')
+                downvotes = row.get('DownVotes')
+                profileimageurl = row.get('ProfileImageUrl')
+                age = row.get('Age')
+                accountid = row.get('AccountId')
+
+                values = [elementid, reputation, creationdate, displayname, lastaccessdate, websiteurl, location,
+                          aboutme, views, upvotes, downvotes, profileimageurl, age, accountid]
+
+                self.cursor.execute('INSERT INTO user VALUES (?, ?, strftime(\'%s\', ?), ?, strftime(\'%s\', ?), ?, ?, \
+                                ?, ?, ?, ?, ?, ?, ?)', values)
+
+            self.connection.commit()
