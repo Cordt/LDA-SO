@@ -19,20 +19,28 @@ class Preprocessor:
         self.lock = Lock()
 
     def simplecleanrawdata(self, rawdata):
+        print("Cleaning data...")
         for row in rawdata:
             tmptext = stripcodeblocks(row)
             if self.setting['theme'] != 'reuters':
                 tmptext = removetags(tmptext)
             self.corpus.append(utils.simple_preprocess(tmptext))
 
+        print("Removing short words...")
+        for (index, document) in enumerate(self.corpus):
+            self.corpus[index] = removeshortwords(document)
+
+        print("Retrieving vocabulary...")
         self.vocabulary = corpora.Dictionary(self.corpus)
-        self.vocabulary.filter_extremes()  # remove stopwords etc
+
+        print("Removing very common and very uncommon words...")
+        self.vocabulary.filter_extremes()
 
     def createcleandata(self, rawdata):
         print("Cleaning data...")
         self._cleandata(rawdata)
 
-        print("Removing very common und very uncommon words (cut of %d%% each side)" % self.setting['histogramcut'])
+        print("Removing very common and very uncommon words (cut of %d%% each side)" % self.setting['histogramcut'])
         self.corpus = removealphacut(self.corpus, self.setting['histogramcut'])
 
         print("Retrieving vocabulary...")

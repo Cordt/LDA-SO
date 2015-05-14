@@ -6,6 +6,7 @@ import PIL.ImageFont
 import math
 import random
 import uuid
+import os
 
 
 class Tagcloud(object):
@@ -15,17 +16,37 @@ class Tagcloud(object):
                   '#39d', '#aab5f0']
     FONT_SIZE = [15, 18, 20, 22, 24, 27, 30, 35, 40, 45]
     
-    def __init__(self, width=400, height=400):
+    def __init__(self, setting, width=400, height=400):
+        self.setting = setting
         self.width = width
         self.height = height
         self.words = list
         self.words_to_draw = None
         self.image = PIL.Image.new('RGBA', [width, height], "#fff")
-        self.imageDraw = PIL.ImageDraw.Draw(self.image)
+        self.imagedraw = PIL.ImageDraw.Draw(self.image)
         self.imagefilepath = str
 
     @staticmethod
-    def formatwordlist(wordlist, values):
+    def createtagcloud(topicmodel, setting):
+        print("Drawing tagcloud...")
+        count = 0
+        directory = "../../results/" + setting['theme'] + "/tagclouds/"
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        for topic in topicmodel.model.show_topics(num_topics=-1, num_words=setting['noofwordsfortopic'],
+                                                  formatted=False):
+            tagcloud = Tagcloud(setting)
+            words = []
+            for (prob, word) in topic:
+                words.append({"text": word, "weight": prob})
+
+            filename = "Topic-" + str(count) + ".jpg"
+            path = ''.join([directory, filename])
+            tagcloud._draw(words, imagefilepath=path)
+            count += 1
+
+    @staticmethod
+    def _formatwordlist(wordlist, values):
         if not isinstance(wordlist, list):
             raise ValueError('words should be a list')
 
@@ -40,7 +61,7 @@ class Tagcloud(object):
 
         return formattedwords
 
-    def draw(self, wordlist, imagefilepath=None):
+    def _draw(self, wordlist, imagefilepath=None):
         self.words = wordlist
         if imagefilepath is None:
             imagefilepath = str(uuid.uuid4()) + '.jpg'
@@ -78,7 +99,7 @@ class Tagcloud(object):
         angle = random.uniform(0.2, 6.28)
 
         fontsize = self.FONT_SIZE[weight]
-        width, height = self.imageDraw.textsize(text, font=PIL.ImageFont.truetype(self.FONT, fontsize))
+        width, height = self.imagedraw.textsize(text, font=PIL.ImageFont.truetype(self.FONT, fontsize))
 
         x = self.width/2 - width/2.0
         y = self.height/2 - height/2.0
@@ -115,10 +136,10 @@ class Tagcloud(object):
     def _save(self):
         for aword in self.words_to_draw:
             if self._liesinside(aword):
-                self.imageDraw.text((aword['x'], aword['y']), aword['text'],
+                self.imagedraw.text((aword['x'], aword['y']), aword['text'],
                                     font=PIL.ImageFont.truetype(self.FONT, aword['fontsize']), fill=aword['color'])
 
-        self.image.save(self.imagefilepath, "JPEG", quality=90)
+        self.image.save(self.imagefilepath, "JPEG", quality=90, replace=True)
         return self.imagefilepath
 
     def _liesinside(self, aword):
@@ -127,50 +148,3 @@ class Tagcloud(object):
             return True
 
         return False
-
-
-if __name__ == '__main__':
-
-    # dictionary = corpora.Dictionary.load("topic_model_lda/dict.dict")
-    # tfidf_model = models.TfidfModel.load("topic_model_lda/lda_model_tfidf_model.model")
-    # lda_model = models.LdaModel.load("topic_model_lda/lda_model.model")
-    #
-    # for topic in range(0, lda_model.num_topics):
-    #     words = []
-    #     t = TagCloud()
-    #     topic_words = lda_model.show_topic(topic, 100)
-    #     for (prob, word) in topic_words:
-    #         words.append({"text": word, "weight": prob})
-    #     print t.draw(words)
-
-    t = Tagcloud()
-    words = [{"text": "coffee", "weight": 20296.0}, {"text": "love", "weight": 15320.0},
-             {"text": "day", "weight": 6860.0}, {"text": "like", "weight": 5521.0},
-             {"text": "follow", "weight": 5393.0}, {"text": "morning", "weight": 5125.0},
-             {"text": "happy", "weight": 5099.0}, {"text": "girl", "weight": 5049.0},
-             {"text": "cute", "weight": 4336.0}, {"text": "good", "weight": 4328.0},
-             {"text": "tumblr", "weight": 4169.0}, {"text": "today", "weight": 4142.0},
-             {"text": "followme", "weight": 3923.0}, {"text": "chocolate", "weight": 3922.0},
-             {"text": "instagood", "weight": 3818.0}, {"text": "yummy", "weight": 3786.0},
-             {"text": "new", "weight": 3700.0}, {"text": "lol", "weight": 3536.0},
-             {"text": "yum", "weight": 3282.0}, {"text": "drink", "weight": 3246.0},
-             {"text": "latte", "weight": 3219.0}, {"text": "time", "weight": 3137.0},
-             {"text": "caramel", "weight": 3125.0}, {"text": "friends", "weight": 3084.0},
-             {"text": "tagsforlikes", "weight": 3005.0}, {"text": "beautiful", "weight": 2892.0},
-             {"text": "food", "weight": 2801.0}, {"text": "life", "weight": 2780.0},
-             {"text": "delicious", "weight": 2767.0}, {"text": "f4f", "weight": 2670.0},
-             {"text": "follow4follow", "weight": 2667.0}, {"text": "white", "weight": 2614.0},
-             {"text": "tea", "weight": 2577.0}, {"text": "selfie", "weight": 2559.0},
-             {"text": "best", "weight": 2522.0}, {"text": "swag", "weight": 2494.0},
-             {"text": "got", "weight": 2491.0}, {"text": "work", "weight": 2479.0},
-             {"text": "fashion", "weight": 2458.0}, {"text": "likeforlike", "weight": 2440.0},
-             {"text": "amazing", "weight": 2434.0}, {"text": "followforfollow", "weight": 2366.0},
-             {"text": "get", "weight": 2365.0}, {"text": "fun", "weight": 2273.0},
-             {"text": "like4like", "weight": 2236.0}, {"text": "frappuccino", "weight": 2167.0},
-             {"text": "picoftheday", "weight": 2083.0}, {"text": "breakfast", "weight": 2062.0},
-             {"text": "smile", "weight": 2060.0}, {"text": "photooftheday", "weight": 2016.0},
-             {"text": "summer", "weight": 1982.0}, {"text": "hot", "weight": 1928.0},
-             {"text": "mocha", "weight": 1906.0}, {"text": "instadaily", "weight": 1896.0},
-             {"text": "pink", "weight": 1883.0}, {"text": "perfect", "weight": 1804.0},
-             {"text": "shopping", "weight": 1801.0}]
-    print t.draw(words)
