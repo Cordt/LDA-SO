@@ -3,8 +3,10 @@ __author__ = 'Cordt'
 from gensim import models, utils
 from Importer import Importer
 from Preprocessor import Preprocessor
+import Similarity as Sim
 import Reuters
 import os
+import numpy as np
 
 
 class Topicmodel:
@@ -35,6 +37,48 @@ class Topicmodel:
             self._loadandpreprocess()
             self._learnmodel()
             self._savemodel()
+
+    def compare_documents(self):
+        no_of_comparisons = 4
+        documents = []
+        doc_array = []
+        for index in range(0, no_of_comparisons):
+            doc_array.append(np.ndarray(shape=(2, self.nooftopics), dtype=float))
+        doc_list = []
+
+        for (outer_index, document) in enumerate(self.model.load_document_topics()):
+            if outer_index == no_of_comparisons:
+                break
+
+            doc_list.append([])
+            documents.append(document)
+            for (inner_index, (topic, weight)) in enumerate(document):
+                doc_list[outer_index].append(weight)
+                if outer_index == 0:
+                    for document_index in range(0, no_of_comparisons):
+                        doc_array[document_index][0][inner_index] = weight
+                doc_array[outer_index][1][inner_index] = weight
+
+        print("\nFirst version")
+        first_doc = None
+        for (index, document) in enumerate(doc_list):
+            if index == 0:
+                first_doc = document
+                continue
+            print(2 * Sim.jsdivergence(first_doc, document))
+
+        print("\nSecond version")
+        for (index, document) in enumerate(documents):
+            if index == 0:
+                first_doc = document
+                continue
+            print(Sim.jsd(first_doc, document, num_topics=self.nooftopics))
+
+        print("\nThird version")
+        for (index, document) in enumerate(doc_array):
+            if index == 0:
+                continue
+            print(Sim.jensen_shannon_divergence(document)[0])
 
     def _loadandpreprocess(self):
         if self.setting['theme'] is 'reuters':

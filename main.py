@@ -6,7 +6,7 @@ import logging
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
-theme = 'beer'
+theme = 'history'
 setting = {
     'theme': theme,
     'dbpath': '../../data/' + theme + '.db',
@@ -27,7 +27,9 @@ else:
 tm = Topicmodel(setting)
 tm.createmodel()
 
-Tagcloud.createtagcloud(tm, setting)
+tm.compare_documents()
+
+# Tagcloud.createtagcloud(tm, setting)
 
 
 # Database connection
