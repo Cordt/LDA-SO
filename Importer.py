@@ -12,6 +12,8 @@ class Importer:
         # Instance variables
         self.setting = setting
         self.corpus = []
+        self.connection = None
+        self.cursor = None
 
     def importxmldata(self):
         self._createdb()
@@ -19,27 +21,60 @@ class Importer:
         self._importposts()
         self._importlinks()
         self._importusers()
-        self._getcorpus()
-        return self.corpus
 
-    def _getcorpus(self):
+    def get_question_corpus(self):
+        # Database connection - instance variables
+        self.connection = sqlite3.connect(self.setting['dbpath'])
+        self.cursor = self.connection.cursor()
+
+        self.corpus = []
+        sql = 'CREATE TABLE IF NOT EXISTS id_to_question_elementId (id INTEGER PRIMARY KEY AUTOINCREMENT, ' \
+              'elementId int, corresponding_table text)'
+        self.cursor.execute(sql)
+
         print("Loading questions...")
-        sql = 'SELECT body FROM question'
+        sql = 'SELECT elementId, body FROM question'
         self.cursor.execute(sql)
         questions = self.cursor.fetchall()
         for row in questions:
             # Append document to corpus
-            self.corpus.append(row[0])
+            self.corpus.append(row[1])
+            values = [row[0], 'question']
+
+            # Append id - element id relation
+            self.cursor.execute('INSERT INTO id_to_question_elementId (elementId, corresponding_table) '
+                                'VALUES (?, ?)', values)
+
+        self.connection.commit()
+        self.connection.close()
+        return self.corpus
+
+    def get_answer_corpus(self):
+        # Database connection - instance variables
+        self.connection = sqlite3.connect(self.setting['dbpath'])
+        self.cursor = self.connection.cursor()
+
+        self.corpus = []
+        sql = 'CREATE TABLE IF NOT EXISTS id_to_answer_elementId (id INTEGER PRIMARY KEY AUTOINCREMENT, ' \
+              'elementId int, corresponding_table text)'
+        self.cursor.execute(sql)
 
         print("Loading answers...")
-        sql = 'SELECT body FROM answer'
+        sql = 'SELECT elementId, body FROM answer'
         self.cursor.execute(sql)
         answers = self.cursor.fetchall()
         for row in answers:
             # Append document to corpus
-            self.corpus.append(row[0])
+            self.corpus.append(row[1])
+            values = [row[0], 'answer']
 
+            # Append id - element id relation
+            self.cursor.execute('INSERT INTO id_to_answer_elementId (elementId, corresponding_table) '
+                                'VALUES (?, ?)', values)
+
+        self.connection.commit()
         self.connection.close()
+        return self.corpus
 
     def _createdb(self):
         # Create tables if database does not exist yet
