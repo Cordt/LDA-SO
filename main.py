@@ -1,7 +1,8 @@
 __author__ = 'Cordt Voigt'
 
 from Topicmodel import Topicmodel
-from Tagcloud import Tagcloud
+from gensim import utils
+# from Tagcloud import Tagcloud
 import logging
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
@@ -27,6 +28,8 @@ else:
 tm = Topicmodel(setting)
 tm.createmodel()
 
-tm.determine_document_similarities()
-# Tagcloud.createtagcloud(tm, setting)
+bow = tm.question_preprocessor.vocabulary.doc2bow(utils.simple_preprocess('What if i told you'))
+print(tm.model[bow])
 
+# tm.determine_document_similarities()
+# Tagcloud.createtagcloud(tm, setting)

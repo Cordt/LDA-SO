@@ -15,12 +15,12 @@ class Importer:
         self.connection = None
         self.cursor = None
 
-    def importxmldata(self):
-        self._createdb()
-        self._importtags()
-        self._importposts()
-        self._importlinks()
-        self._importusers()
+    def import_xml_data(self):
+        self._create_db()
+        self._import_tags()
+        self._import_posts()
+        self._import_links()
+        self._import_users()
 
     def get_question_corpus(self):
         # Database connection - instance variables
@@ -76,7 +76,7 @@ class Importer:
         self.connection.close()
         return self.corpus
 
-    def _createdb(self):
+    def _create_db(self):
         # Create tables if database does not exist yet
         if not os.path.isfile(self.setting['dbpath']):
             print("Database does not exist yet, creating...")
@@ -128,7 +128,7 @@ class Importer:
 
             print("Database already exists, connecting...")
 
-    def _importposts(self):
+    def _import_posts(self):
         tree = ElementTree.parse(self.setting['folderprefix'] + 'Posts.xml')
         root = tree.getroot()
 
@@ -162,7 +162,7 @@ class Importer:
                     title = row.get('Title')
                     tags = row.get('Tags')
                     # Add tags for question
-                    self._inserttagsforpost(tags, elementid)
+                    self._insert_tags_for_post(tags, elementid)
                     answercount = row.get('AnswerCount')
                     values = [elementid, creationdate, score, body, owneruserid, lastactivitydate, commentcount,
                               acceptedanswerid, viewcount, title, answercount]
@@ -183,7 +183,7 @@ class Importer:
             self.connection.commit()
 
     # Must be called before importposts
-    def _importtags(self):
+    def _import_tags(self):
         tree = ElementTree.parse(self.setting['folderprefix'] + 'Tags.xml')
         root = tree.getroot()
 
@@ -209,7 +209,7 @@ class Importer:
             self.connection.commit()
 
     # Used in importposts, do not use anywhere else
-    def _inserttagsforpost(self, tags, questionid):
+    def _insert_tags_for_post(self, tags, questionid):
         regex = re.compile('(<.+?>)')
         for tag in regex.findall(tags):
             # Get tag ID
@@ -225,7 +225,7 @@ class Importer:
             else:
                 print('No tag record found for ', tag)
 
-    def _importlinks(self):
+    def _import_links(self):
         tree = ElementTree.parse(self.setting['folderprefix'] + 'PostLinks.xml')
         root = tree.getroot()
 
@@ -252,7 +252,7 @@ class Importer:
 
             self.connection.commit()
 
-    def _importusers(self):
+    def _import_users(self):
         tree = ElementTree.parse(self.setting['folderprefix'] + 'Users.xml')
         root = tree.getroot()
 

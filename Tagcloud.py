@@ -1,5 +1,3 @@
-from gensim import *
-
 import PIL.Image
 import PIL.ImageDraw
 import PIL.ImageFont

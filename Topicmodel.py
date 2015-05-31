@@ -37,7 +37,7 @@ class Topicmodel:
 
         # Importing data
         self.importer = Importer(self.setting)
-        self.importer.importxmldata()
+        self.importer.import_xml_data()
         self._loadandpreprocess_questions()
         self._loadandpreprocess_answers()
 
@@ -79,7 +79,6 @@ class Topicmodel:
 
     def _find_most_similar_answers(self):
         for element in self.answer_preprocessor.corpus:
-
             # Determine topics of the answers in the question topic model
             bow = self.question_preprocessor.vocabulary.doc2bow(element)
             topics = self.model[bow]
@@ -117,21 +116,21 @@ class Topicmodel:
 
             # Preprocessing data
             self.question_preprocessor = Preprocessor(self.setting)
-            self.question_preprocessor.simplecleanrawdata(rawdata)
+            self.question_preprocessor.simple_clean_raw_data(rawdata)
 
         else:
             rawdata = self.importer.get_question_corpus()
 
             # Preprocessing data
             self.question_preprocessor = Preprocessor(self.setting)
-            self.question_preprocessor.simplecleanrawdata(rawdata)
+            self.question_preprocessor.simple_clean_raw_data(rawdata)
 
     def _loadandpreprocess_answers(self):
         rawdata = self.importer.get_answer_corpus()
 
         # Preprocessing data
         self.answer_preprocessor = Preprocessor(self.setting)
-        self.answer_preprocessor.simplecleanrawdata(rawdata)
+        self.answer_preprocessor.simple_clean_raw_data(rawdata)
 
     def _learnmodel(self):
         self.model = models.wrappers.LdaMallet(self.mallet_path, self, num_topics=self.nooftopics,
@@ -156,7 +155,7 @@ class Topicmodel:
 
         for (topic, weight) in second_document:
             second_topic_description.append(weight)
-        return Sim.jsdistance(first_topic_description, second_topic_description)
+        return Sim.js_distance(first_topic_description, second_topic_description)
 
     @staticmethod
     def sorted_similarity_list(similarities):
@@ -191,5 +190,3 @@ class Topicmodel:
             cursor.execute('INSERT INTO similarities VALUES (?, ?, ?)', values)
 
         connection.commit()
-
-

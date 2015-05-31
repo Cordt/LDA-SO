@@ -4,11 +4,11 @@ from scipy import stats
 import numpy as np
 
 
-def jsdistance(p, q):
-    return np.sqrt(jsdivergence(p, q))
+def js_distance(p, q):
+    return np.sqrt(js_divergence(p, q))
 
 
-def jsdivergence(p, q):
+def js_divergence(p, q):
     _p = p / np.linalg.norm(p, ord=1)
     _q = q / np.linalg.norm(q, ord=1)
     _m = 0.5 * (_p + _q)
