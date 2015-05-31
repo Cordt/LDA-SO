@@ -1,13 +1,13 @@
 __author__ = 'Cordt Voigt'
 
 from Topicmodel import Topicmodel
-from gensim import utils
 # from Tagcloud import Tagcloud
 import logging
+import os
 
-logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.WARNING)
 
-theme = 'beer'
+theme = 'travel'
 setting = {
     'theme': theme,
     'dbpath': '../../data/' + theme + '.db',
@@ -28,8 +28,16 @@ else:
 tm = Topicmodel(setting)
 tm.createmodel()
 
-bow = tm.question_preprocessor.vocabulary.doc2bow(utils.simple_preprocess('What if i told you'))
-print(tm.model[bow])
+# Create similarities db if neccessary
+directory = "../../results/" + setting['theme'] + "/model/"
+filename = "similarities.db"
+dbpath = ''.join([directory, filename])
 
-# tm.determine_document_similarities()
+if not os.path.isfile(dbpath):
+    print("Similarities database does not exist yet, determining similarities and writing to database...")
+    tm.determine_question_answer_distances()
+
+# Determine avergae distances of answers, that are related to the question
+tm.get_true_answers_distances(no_of_questions=-1)
+
 # Tagcloud.createtagcloud(tm, setting)
