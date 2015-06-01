@@ -38,6 +38,6 @@ if not os.path.isfile(dbpath):
     tm.determine_question_answer_distances()
 
 # Determine avergae distances of answers, that are related to the question
-tm.get_true_answers_distances(no_of_questions=-1)
-
+# tm.get_true_answers_distances(no_of_questions=-1)
+tm.compute_answer_order_metric(no_of_questions=-1)
 # Tagcloud.createtagcloud(tm, setting)

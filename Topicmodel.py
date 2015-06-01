@@ -123,9 +123,10 @@ class Topicmodel:
         average_distance = 0.0
         for question_id in range(0, no_of_questions):
             answer_similarities = self._load_similarities_for_question(question_id)
-            related_answer_ids = self._get_related_answer_ids(question_id)
+            related_answer_ids = self._get_related_answer_ids(question_id, with_score=False)
             if len(related_answer_ids) is not 0:
                 for (answer_index, row) in enumerate(answer_similarities):
+
                     # Check whether answer is one of the answers, given to this question
                     if row[1] in related_answer_ids:
                         normalized_distance += (float(answer_index) / float(len(answer_similarities)))
@@ -137,6 +138,23 @@ class Topicmodel:
         average_distance /= float(no_of_questions)
         print(average_distance)
 
+    def compute_answer_order_metric(self, no_of_questions=-1):
+        average_edit_distance = 0.0
+        if no_of_questions is -1:
+            no_of_questions = self._get_max_question_id()
+        for question_id in range(0, no_of_questions):
+
+            # Get answers sorted by similarity and sorted by score
+            similarity_ordered_answers = self._load_related_answer_similarities_for_question(question_id)
+            score_ordered_answers = self._get_related_answer_ids(question_id, with_score=True)
+
+            # Compute the edit distance
+            edit_ditance = self._get_edit_distance_for_answer_order(score_ordered_answers, similarity_ordered_answers)
+
+            average_edit_distance += edit_ditance
+        average_edit_distance /= float(no_of_questions)
+        print(average_edit_distance)
+
     def _load_similarities_for_question(self, question_id):
         directory = "../../results/" + self.setting['theme'] + "/model/"
         filename = "similarities.db"
@@ -147,9 +165,38 @@ class Topicmodel:
         cursor = connection.cursor()
 
         values = [question_id]
-        cursor.execute('SELECT * FROM `similarities` WHERE questionId=? ORDER BY similarity DESC', values)
+        # The smaller the closer --> ascending
+        cursor.execute('SELECT * FROM `similarities` WHERE questionId=? ORDER BY similarity ASC', values)
 
         return cursor.fetchall()
+
+    def _load_related_answer_similarities_for_question(self, question_id):
+        directory = "../../results/" + self.setting['theme'] + "/model/"
+        filename = "similarities.db"
+        dbpath = ''.join([directory, filename])
+
+        # Database connection - instance variables
+        connection = sqlite3.connect(dbpath)
+        cursor = connection.cursor()
+
+        related_answers_ids = self._get_related_answer_ids(question_id, with_score=False)
+        related_answers_id_strings = []
+        for element in related_answers_ids:
+            related_answers_id_strings.append(str(element))
+        tmp_string = ','.join(related_answers_id_strings)
+
+        values = [question_id, tmp_string]
+        # The smaller the closer --> ascending
+        cursor.execute('SELECT answerId, similarity FROM `similarities` WHERE questionId=' + str(question_id) +
+                       ' AND answerId IN (' + tmp_string + ') ORDER BY similarity ASC')
+
+        result = cursor.fetchall()
+        related_answer_similarities = []
+        for row in result:
+            # Store a tuple like (answer ID, similarity)
+            related_answer_similarities.append((row[0], row[1]))
+
+        return related_answer_similarities
 
     def _get_max_question_id(self):
         directory = "../../results/" + self.setting['theme'] + "/model/"
@@ -163,7 +210,7 @@ class Topicmodel:
         cursor.execute('SELECT MAX(questionId) FROM similarities')
         return cursor.fetchone()[0]
 
-    def _get_related_answer_ids(self, question_id):
+    def _get_related_answer_ids(self, question_id, with_score=False):
         dbpath = self.setting['dbpath']
 
         # Database connection - instance variables
@@ -178,18 +225,43 @@ class Topicmodel:
         cursor.execute('SELECT elementId FROM id_to_question_elementId WHERE id=?', values)
         question_element_id = cursor.fetchone()[0]
 
-        # Get the related answers
+        # Get the related answers and their scores
         values = [question_element_id]
-        cursor.execute('SELECT elementId FROM answer WHERE questionId=?', values)
+        cursor.execute('SELECT elementId, score FROM answer WHERE questionId=? ORDER BY score DESC', values)
         related_answer_element_ids = cursor.fetchall()
 
         # Translate answer element ID's to ID's
         for answer_element_id in related_answer_element_ids:
             values = [answer_element_id[0]]
             cursor.execute('SELECT id FROM id_to_answer_elementId WHERE elementId=?', values)
-            answer_ids.append(cursor.fetchone()[0])
+            result = cursor.fetchone()
+
+            if with_score:
+                # Store a tuple like (answer ID, score)
+                answer_ids.append((result[0], answer_element_id[1]))
+            else:
+                answer_ids.append(result[0])
 
         return answer_ids
+
+    @staticmethod
+    def _get_edit_distance_for_answer_order(score_ordered_answers, similarity_ordered_answers):
+        no_of_answers = len(score_ordered_answers)
+        if no_of_answers is not 0:
+            average_edit_distance = 0.0
+            for (outer_answer_index, (outer_anwser_id, _)) in enumerate(score_ordered_answers):
+                edit_distance = 0
+                for (inner_answer_index, (inner_answer_id, __)) in enumerate(similarity_ordered_answers):
+                    if outer_anwser_id == inner_answer_id:
+                        edit_distance += abs(outer_answer_index - inner_answer_index)
+                        break
+                    else:
+                        continue
+                average_edit_distance += float(edit_distance)
+            average_edit_distance /= float(no_of_answers)
+            return average_edit_distance
+        else:
+            return -1
 
     ####################################################################################################
     # Calculate and store document similarities
