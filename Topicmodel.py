@@ -3,9 +3,11 @@ __author__ = 'Cordt'
 from gensim import models, utils
 from Importer import Importer
 from Preprocessor import Preprocessor
+from multiprocessing import Process, Lock, Queue
 import Similarity as Sim
 import Reuters
 import os
+import sys
 import sqlite3
 
 
@@ -20,6 +22,8 @@ class Topicmodel:
         self.importer = None
         self.question_preprocessor = None
         self.answer_preprocessor = None
+
+        self.lock = Lock()
 
     def __iter__(self):
         for tokens in self.question_preprocessor.corpus:
@@ -121,6 +125,9 @@ class Topicmodel:
             no_of_questions = self._get_max_question_id()
         normalized_distance = 0.0
         average_distance = 0.0
+
+        print('Calculating distance of related answers to a given question')
+
         for question_id in range(0, no_of_questions):
             answer_similarities = self._load_similarities_for_question(question_id)
             related_answer_ids = self._get_related_answer_ids(question_id, with_score=False)
@@ -135,8 +142,15 @@ class Topicmodel:
                 average_distance += normalized_distance
                 normalized_distance = 0.0
 
+            # Print percentage of already finished questions
+            if question_id % 10 is 0:
+                ratio = (float(question_id) / float(no_of_questions)) * 100.0
+                sys.stdout.write("\r\t%d%%" % ratio)
+                sys.stdout.flush()
+        print('\n\tDone.')
+
         average_distance /= float(no_of_questions)
-        print(average_distance)
+        print('The average distance of related questions to a given question is %s' % average_distance)
 
     def compute_answer_order_metric(self, no_of_questions=-1):
         average_edit_distance = 0.0
@@ -152,8 +166,16 @@ class Topicmodel:
             edit_ditance = self._get_edit_distance_for_answer_order(score_ordered_answers, similarity_ordered_answers)
 
             average_edit_distance += edit_ditance
+
+            # Print percentage of already finished questions
+            if question_id % 10 is 0:
+                ratio = (float(question_id) / float(no_of_questions)) * 100.0
+                sys.stdout.write("\r\t%d%%" % ratio)
+                sys.stdout.flush()
+        print('\n\tDone.')
+
         average_edit_distance /= float(no_of_questions)
-        print(average_edit_distance)
+        print('The average edit distance of answers related to a question is %s' % average_edit_distance)
 
     def _load_similarities_for_question(self, question_id):
         directory = "../../results/" + self.setting['theme'] + "/model/"
@@ -291,7 +313,8 @@ class Topicmodel:
         sql = 'DROP TABLE IF EXISTS similarities'
         cursor.execute(sql)
 
-        sql = 'CREATE TABLE IF NOT EXISTS similarities (questionId int, answerId int, similarity real)'
+        sql = 'CREATE TABLE IF NOT EXISTS similarities (questionId int, answerId int, similarity real ' \
+              'PRIMARY KEY (questionId, answerId))'
         cursor.execute(sql)
 
     def _write_similarities_to_db(self, similarities):

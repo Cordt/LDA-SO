@@ -38,6 +38,9 @@ if not os.path.isfile(dbpath):
     tm.determine_question_answer_distances()
 
 # Determine avergae distances of answers, that are related to the question
-# tm.get_true_answers_distances(no_of_questions=-1)
+#tm.get_true_answers_distances(no_of_questions=-1)
+
+# Determine the distance to the correct order of answers to a question, given by the upvote score, compared to the order
+# given by the topic model
 tm.compute_answer_order_metric(no_of_questions=-1)
-# Tagcloud.createtagcloud(tm, setting)
+
