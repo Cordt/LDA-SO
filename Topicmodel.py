@@ -3,8 +3,7 @@ __author__ = 'Cordt'
 from gensim import models, utils
 from Importer import Importer
 from Preprocessor import Preprocessor
-from multiprocessing import Process, Lock, Queue
-import Similarity as Sim
+import Metric
 import Reuters
 import os
 import sys
@@ -22,8 +21,6 @@ class Topicmodel:
         self.importer = None
         self.question_preprocessor = None
         self.answer_preprocessor = None
-
-        self.lock = Lock()
 
     def __iter__(self):
         for tokens in self.question_preprocessor.corpus:
@@ -67,7 +64,6 @@ class Topicmodel:
 
         else:
             rawdata = self.importer.get_question_corpus()
-
             # Preprocessing data
             self.question_preprocessor = Preprocessor(self.setting)
             self.question_preprocessor.simple_clean_raw_data(rawdata)
@@ -93,32 +89,8 @@ class Topicmodel:
         self.model.save(fname_or_handle=path)
 
     ####################################################################################################
-    # Calculate statistics on data
+    # Calculate statistics on data - Experiment 1, actual distance to question
     ####################################################################################################
-
-    def determine_question_answer_distances(self, no_of_answers=-1):
-        similarities = []
-
-        # Remove current similarities table, if any
-        self._create_clean_similarities_table()
-
-        doc_count = 0
-
-        for (answer_index, element) in enumerate(self.answer_preprocessor.corpus):
-            # Determine topics of the answers in the question topic model
-            bow = self.question_preprocessor.vocabulary.doc2bow(element)
-            answer_topics = self.model[bow]
-
-            for (question_index, question_topics) in enumerate(self.model.load_document_topics()):
-                similarities.append((question_index, answer_index, self._compare_documents(question_topics,
-                                                                                           answer_topics)))
-
-            self._write_similarities_to_db(similarities)
-            similarities = []
-
-            doc_count += 1
-            if doc_count == no_of_answers:
-                break
 
     def get_true_answers_distances(self, no_of_questions=-1):
         if no_of_questions is -1:
@@ -126,22 +98,43 @@ class Topicmodel:
         normalized_distance = 0.0
         average_distance = 0.0
 
-        print('Calculating distance of related answers to a given question')
+        print('Calculating distance of related answers to a given question...')
 
-        for question_id in range(0, no_of_questions):
+        # We don't count questions that do not have an answer
+        actual_no_of_questions = no_of_questions + 1
+
+        for question_id in range(1, no_of_questions + 1):
+
+            # Table similarities: [questionId, answerId, similarity], ordered by similarity, ascending
             answer_similarities = self._load_similarities_for_question(question_id)
+
+            # Table answer: (id), Ordered By score, descending
             related_answer_ids = self._get_related_answer_ids(question_id, with_score=False)
+
+            # The actual_answer_index and the actual_total_number_of_answers make sure that the
+            # metric is normalized from 0 to 1
+            actual_answer_index = 0
+            actual_total_number_of_answers = len(answer_similarities) - 1
+
             if len(related_answer_ids) is not 0:
-                for (answer_index, row) in enumerate(answer_similarities):
+                for row in answer_similarities:
 
                     # Check whether answer is one of the answers, given to this question
                     if row[1] in related_answer_ids:
-                        normalized_distance += (float(answer_index) / float(len(answer_similarities)))
+                        # We need to substract 1 in order to normalize to 0
+                        normalized_distance += (float(actual_answer_index) / float(actual_total_number_of_answers))
+
+                        actual_answer_index -= 1
+                        actual_total_number_of_answers -= 1
+                    actual_answer_index += 1
 
                 normalized_distance /= float(len(related_answer_ids))
                 average_distance += normalized_distance
                 normalized_distance = 0.0
 
+            else:
+                actual_no_of_questions -= 1
+
             # Print percentage of already finished questions
             if question_id % 10 is 0:
                 ratio = (float(question_id) / float(no_of_questions)) * 100.0
@@ -149,23 +142,39 @@ class Topicmodel:
                 sys.stdout.flush()
         print('\n\tDone.')
 
-        average_distance /= float(no_of_questions)
+        average_distance /= float(actual_no_of_questions)
         print('The average distance of related questions to a given question is %s' % average_distance)
 
-    def compute_answer_order_metric(self, no_of_questions=-1):
-        average_edit_distance = 0.0
-        if no_of_questions is -1:
-            no_of_questions = self._get_max_question_id()
-        for question_id in range(0, no_of_questions):
+    ####################################################################################################
+    # Calculate statistics on data - Experiment 2
+    ####################################################################################################
 
-            # Get answers sorted by similarity and sorted by score
+    def compute_answer_order_metric(self, no_of_questions=-1):
+
+        print('Calculating the average edit distance of answer, related to a question, with respect to their'
+              'score and similarity measure...')
+
+        average_deviation_distance = 0.0
+
+        if no_of_questions == -1:
+            no_of_questions = self._get_max_question_id()
+
+        actual_no_of_questions = no_of_questions
+
+        for question_id in range(1, no_of_questions + 1):
+
+            # Table similarities: (answer ID, similarity), ordered by similarity, ascending
             similarity_ordered_answers = self._load_related_answer_similarities_for_question(question_id)
+
+            # Table answer: (answer ID, score), Ordered By score, descending
             score_ordered_answers = self._get_related_answer_ids(question_id, with_score=True)
 
-            # Compute the edit distance
-            edit_ditance = self._get_edit_distance_for_answer_order(score_ordered_answers, similarity_ordered_answers)
-
-            average_edit_distance += edit_ditance
+            # Compute the normalized deviation distance
+            deviation_distance = Metric.deviation_distance(score_ordered_answers, similarity_ordered_answers)
+            if deviation_distance == -1:
+                actual_no_of_questions -= 1
+            else:
+                average_deviation_distance += deviation_distance
 
             # Print percentage of already finished questions
             if question_id % 10 is 0:
@@ -174,8 +183,16 @@ class Topicmodel:
                 sys.stdout.flush()
         print('\n\tDone.')
 
-        average_edit_distance /= float(no_of_questions)
-        print('The average edit distance of answers related to a question is %s' % average_edit_distance)
+        average_deviation_distance /= float(actual_no_of_questions)
+        print('The average deviation distance of answers related to a question is %s' % average_deviation_distance)
+
+    ####################################################################################################
+    # Calculate statistics on data - Experiment 3
+    ####################################################################################################
+
+    ####################################################################################################
+    # Calculate statistics on data - Helper methods
+    ####################################################################################################
 
     def _load_similarities_for_question(self, question_id):
         directory = "../../results/" + self.setting['theme'] + "/model/"
@@ -188,7 +205,8 @@ class Topicmodel:
 
         values = [question_id]
         # The smaller the closer --> ascending
-        cursor.execute('SELECT * FROM `similarities` WHERE questionId=? ORDER BY similarity ASC', values)
+        cursor.execute('SELECT questionId, answerId, similarity FROM `similarities` WHERE questionId=? '
+                       'ORDER BY similarity ASC', values)
 
         return cursor.fetchall()
 
@@ -207,7 +225,6 @@ class Topicmodel:
             related_answers_id_strings.append(str(element))
         tmp_string = ','.join(related_answers_id_strings)
 
-        values = [question_id, tmp_string]
         # The smaller the closer --> ascending
         cursor.execute('SELECT answerId, similarity FROM `similarities` WHERE questionId=' + str(question_id) +
                        ' AND answerId IN (' + tmp_string + ') ORDER BY similarity ASC')
@@ -241,53 +258,48 @@ class Topicmodel:
 
         answer_ids = []
 
-        # Get the original question ID
-        # Document counting starts at 1
-        values = [question_id + 1]
-        cursor.execute('SELECT elementId FROM id_to_question_elementId WHERE id=?', values)
-        question_element_id = cursor.fetchone()[0]
-
         # Get the related answers and their scores
-        values = [question_element_id]
-        cursor.execute('SELECT elementId, score FROM answer WHERE questionId=? ORDER BY score DESC', values)
+        values = [question_id]
+        cursor.execute('SELECT id, score FROM answer WHERE questionId=? ORDER BY score DESC', values)
         related_answer_element_ids = cursor.fetchall()
 
         # Translate answer element ID's to ID's
         for answer_element_id in related_answer_element_ids:
-            values = [answer_element_id[0]]
-            cursor.execute('SELECT id FROM id_to_answer_elementId WHERE elementId=?', values)
-            result = cursor.fetchone()
-
             if with_score:
                 # Store a tuple like (answer ID, score)
-                answer_ids.append((result[0], answer_element_id[1]))
+                answer_ids.append((answer_element_id[0], answer_element_id[1]))
             else:
-                answer_ids.append(result[0])
+                answer_ids.append(answer_element_id[0])
 
         return answer_ids
-
-    @staticmethod
-    def _get_edit_distance_for_answer_order(score_ordered_answers, similarity_ordered_answers):
-        no_of_answers = len(score_ordered_answers)
-        if no_of_answers is not 0:
-            average_edit_distance = 0.0
-            for (outer_answer_index, (outer_anwser_id, _)) in enumerate(score_ordered_answers):
-                edit_distance = 0
-                for (inner_answer_index, (inner_answer_id, __)) in enumerate(similarity_ordered_answers):
-                    if outer_anwser_id == inner_answer_id:
-                        edit_distance += abs(outer_answer_index - inner_answer_index)
-                        break
-                    else:
-                        continue
-                average_edit_distance += float(edit_distance)
-            average_edit_distance /= float(no_of_answers)
-            return average_edit_distance
-        else:
-            return -1
 
     ####################################################################################################
     # Calculate and store document similarities
     ####################################################################################################
+
+    def determine_question_answer_distances(self, no_of_answers=-1):
+        similarities = []
+
+        # Remove current similarities table, if any
+        self._create_clean_similarities_table()
+
+        doc_count = 0
+
+        for (answer_index, element) in enumerate(self.answer_preprocessor.corpus, start=1):
+            # Determine topics of the answers in the question topic model
+            bow = self.question_preprocessor.vocabulary.doc2bow(element)
+            answer_topics = self.model[bow]
+
+            for (question_index, question_topics) in enumerate(self.model.load_document_topics(), start=1):
+                similarities.append((question_index, answer_index, self._compare_documents(question_topics,
+                                                                                           answer_topics)))
+
+            self._write_similarities_to_db(similarities)
+            similarities = []
+
+            doc_count += 1
+            if doc_count == no_of_answers:
+                break
 
     @staticmethod
     def _compare_documents(first_document, second_document):
@@ -299,7 +311,7 @@ class Topicmodel:
 
         for (topic, weight) in second_document:
             second_topic_description.append(weight)
-        return Sim.js_distance(first_topic_description, second_topic_description)
+        return Metric.js_distance(first_topic_description, second_topic_description)
 
     def _create_clean_similarities_table(self):
         directory = "../../results/" + self.setting['theme'] + "/model/"
@@ -313,7 +325,7 @@ class Topicmodel:
         sql = 'DROP TABLE IF EXISTS similarities'
         cursor.execute(sql)
 
-        sql = 'CREATE TABLE IF NOT EXISTS similarities (questionId int, answerId int, similarity real ' \
+        sql = 'CREATE TABLE IF NOT EXISTS similarities (questionId int, answerId int, similarity real, ' \
               'PRIMARY KEY (questionId, answerId))'
         cursor.execute(sql)
 
@@ -335,3 +347,37 @@ class Topicmodel:
     @staticmethod
     def sorted_similarity_list(similarities):
         return sorted(similarities, key=lambda similarity: similarity[2])
+
+    ####################################################################################################
+    # Calculate and store document lenghts
+    ####################################################################################################
+
+    def _create_clean_length_table(self):
+        directory = "../../results/" + self.setting['theme'] + "/model/"
+        filename = "lenghts.db"
+        dbpath = ''.join([directory, filename])
+
+        # Database connection - instance variables
+        connection = sqlite3.connect(dbpath)
+        cursor = connection.cursor()
+
+        sql = 'DROP TABLE IF EXISTS lengths'
+        cursor.execute(sql)
+
+        sql = 'CREATE TABLE IF NOT EXISTS lengths (answerId INTEGER PRIMARY KEY, length int)'
+        cursor.execute(sql)
+
+    def _write_lengths_to_db(self, lengths):
+        directory = "../../results/" + self.setting['theme'] + "/model/"
+        filename = "lenghts.db"
+        dbpath = ''.join([directory, filename])
+
+        # Database connection - instance variables
+        connection = sqlite3.connect(dbpath)
+        cursor = connection.cursor()
+
+        for (answer_id, length) in lengths:
+            values = [answer_id, length]
+            cursor.execute('INSERT INTO lengths VALUES (?, ?)', values)
+
+        connection.commit()

@@ -29,7 +29,9 @@ class Preprocessor:
         self.vocabulary = corpora.Dictionary(self.corpus)
 
         print("Removing very common and very uncommon words...")
-        self.vocabulary.filter_extremes()
+        no_below = self.setting['filter_less_than_no_of_documents']
+        no_above = self.setting['filter_more_than_fraction_of_documents']
+        self.vocabulary.filter_extremes(no_below=no_below, no_above=no_above)
 
     @staticmethod
     def strip_code_blocks(text):
