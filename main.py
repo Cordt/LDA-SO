@@ -15,9 +15,9 @@ setting = {
 
     'malletpath': '/usr/share/mallet-2.0.7/bin/mallet',
 
-    'nooftopics': 10,
-    'noofwordsfortopic': 50,
-    'noofiterations': 100,
+    'nooftopics': 100,
+    'noofwordsfortopic': 100,
+    'noofiterations': 1000,
     'noofprocesses': 20,
 
     # Filter all words that appear in less documents
@@ -26,7 +26,7 @@ setting = {
     # Filter all documents that appear in more than the given fraction of documents
     'filter_more_than_fraction_of_documents': 0.5,
 
-    'create_tag_cloud': False,
+    'create_tag_cloud': True,
     'clean_similarities_table': False,
 
     # Data used for topic model
@@ -37,7 +37,7 @@ setting = {
     # 1: Exact match distance
     # 2: Deviation distance
     # 3: Squared deviation distance
-    'distance_metric': 3}
+    'distance_metric': 1}
 
 if theme is 'reuters':
     setting['folderprefix'] = '../../data/' + theme + '/'

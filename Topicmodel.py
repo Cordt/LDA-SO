@@ -20,6 +20,7 @@ class Topicmodel:
         self.model = None
         self.importer = None
         self.preprocessor = None
+        self.answer_preprocessor = None
 
         # Set tablename for similarities table
         self.sim_tablename = ""
@@ -100,6 +101,10 @@ class Topicmodel:
 
                 self.preprocessor = Preprocessor(self.setting)
                 self.preprocessor.simple_clean_raw_data(rawdata)
+
+            rawdata = self.importer.get_answer_corpus()
+            self.answer_preprocessor = Preprocessor(self.setting)
+            self.answer_preprocessor.simple_clean_raw_data(rawdata)
 
     def _learnmodel(self):
         self.model = models.wrappers.LdaMallet(self.mallet_path, self, num_topics=self.nooftopics,
@@ -451,15 +456,20 @@ class Topicmodel:
             print('Similarities tables not empty, adding nothing')
             return
 
+        # Load all question topics
+        question_topics = []
+        for (question_index, question_topic) in enumerate(self.model.load_document_topics(), start=1):
+            question_topics.append((question_index, question_topic))
+
         doc_count = 0
 
-        for (answer_index, element) in enumerate(self.preprocessor.corpus, start=1):
-            # Determine topics of the answers in the question topic model
+        for (answer_index, element) in enumerate(self.answer_preprocessor.corpus, start=1):
+            # Determine topics of the answers in the topic model
             bow = self.preprocessor.vocabulary.doc2bow(element)
             answer_topics = self.model[bow]
 
-            for (question_index, question_topics) in enumerate(self.model.load_document_topics(), start=1):
-                similarities.append((question_index, answer_index, self._compare_documents(question_topics,
+            for (question_index, question_topic) in question_topics:
+                similarities.append((question_index, answer_index, self._compare_documents(question_topic,
                                                                                            answer_topics)))
 
             self._write_similarities_to_db(similarities)
@@ -530,7 +540,7 @@ class Topicmodel:
         # Remove current similarities table, if any
         self._create_clean_lengths_table()
 
-        for (answer_index, element) in enumerate(self.preprocessor.corpus, start=1):
+        for (answer_index, element) in enumerate(self.answer_preprocessor.corpus, start=1):
             lengths.append((answer_index, len(element)))
 
         self._write_lengths_to_db(lengths)
