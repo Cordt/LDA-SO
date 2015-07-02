@@ -21,6 +21,7 @@ class Topicmodel:
         self.importer = None
         self.preprocessor = None
         self.answer_preprocessor = None
+        self.no_of_questions = 0
 
         # Set tablename for similarities table
         self.sim_tablename = ""
@@ -102,6 +103,10 @@ class Topicmodel:
                 self.preprocessor = Preprocessor(self.setting)
                 self.preprocessor.simple_clean_raw_data(rawdata)
 
+            # We need the number of questions
+            self.no_of_questions = self.importer.get_number_of_questions()
+
+            # We need the answer corpus separately
             rawdata = self.importer.get_answer_corpus()
             self.answer_preprocessor = Preprocessor(self.setting)
             self.answer_preprocessor.simple_clean_raw_data(rawdata)
@@ -144,14 +149,16 @@ class Topicmodel:
             used_data = 'Questions and answers'
         output += '\tData used for topic model:\t\t\t\t' + used_data + '\n'
 
-        used_metric = ''
-        if self.setting['distance_metric'] == 1:
-            used_metric = 'Exact match distance'
-        elif self.setting['distance_metric'] == 2:
-            used_metric = 'Deviation distance'
-        elif self.setting['distance_metric'] == 3:
-            used_metric = 'Squared deviaton distance'
-        output += '\tDistance metric used for experiment:\t' + used_metric + '\n\n'
+        # Metrics are only used for Experiment 2 and 3
+        if experiment_no != 0:
+            used_metric = ''
+            if self.setting['distance_metric'] == 1:
+                used_metric = 'Exact match distance'
+            elif self.setting['distance_metric'] == 2:
+                used_metric = 'Deviation distance'
+            elif self.setting['distance_metric'] == 3:
+                used_metric = 'Squared deviaton distance'
+            output += '\tDistance metric used for experiment:\t' + used_metric + '\n\n'
 
         output += 'Result:\t' + str(result) + '\n'
         output += '\n####################\n\n'
@@ -460,6 +467,8 @@ class Topicmodel:
         question_topics = []
         for (question_index, question_topic) in enumerate(self.model.load_document_topics(), start=1):
             question_topics.append((question_index, question_topic))
+            if question_index >= self.no_of_questions:
+                break
 
         doc_count = 0
 

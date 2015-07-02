@@ -26,12 +26,12 @@ setting = {
     # Filter all documents that appear in more than the given fraction of documents
     'filter_more_than_fraction_of_documents': 0.5,
 
-    'create_tag_cloud': True,
+    'create_tag_cloud': False,
     'clean_similarities_table': False,
 
     # Data used for topic model
     # 1: Questions, 2: Answers, 3: Both
-    'data_for_model': 1,
+    'data_for_model': 2,
 
     # Used distance metric for the permutations
     # 1: Exact match distance

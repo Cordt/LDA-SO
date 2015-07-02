@@ -22,6 +22,18 @@ class Importer:
         self._import_links()
         self._import_users()
 
+    def get_number_of_questions(self):
+        # Database connection - instance variables
+        self.connection = sqlite3.connect(self.setting['dbpath'])
+        self.cursor = self.connection.cursor()
+
+        self.corpus = []
+
+        sql = 'SELECT COUNT(id) FROM question'
+        self.cursor.execute(sql)
+        questions = self.cursor.fetchone()
+        return questions[0]
+
     def get_question_corpus(self):
         # Database connection - instance variables
         self.connection = sqlite3.connect(self.setting['dbpath'])

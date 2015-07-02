@@ -24,7 +24,7 @@ def exact_match_distance(score_ordered_answers, similarity_ordered_answers):
         if no_of_answers != 0:
             average_distance = 0.0
             for (outer_answer_index, (outer_anwser_id, _)) in enumerate(score_ordered_answers):
-                if outer_anwser_id != similarity_ordered_answers[outer_answer_index]:
+                if outer_anwser_id != similarity_ordered_answers[outer_answer_index][0]:
                     average_distance += float(1.0)
 
             # Normalization
