@@ -28,7 +28,7 @@ class Tagcloud(object):
     def createtagcloud(topicmodel, setting):
         print("Drawing tagcloud...")
         count = 0
-        directory = "../../results/" + setting['theme'] + "/tagclouds/"
+        directory = setting['resultfolder'] + setting['theme'] + "/tagclouds/"
         if not os.path.exists(directory):
             os.makedirs(directory)
         for topic in topicmodel.model.show_topics(num_topics=-1, num_words=setting['noofwordsfortopic'],
