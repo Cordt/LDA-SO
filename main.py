@@ -7,7 +7,7 @@ import os
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.WARNING)
 
-theme = 'beer'
+theme = 'islam'
 setting = {
     'theme': theme,
     'dbpath': '../../data/' + theme + '.db',
@@ -31,7 +31,7 @@ setting = {
 
     # Data used for topic model
     # 1: Questions, 2: Answers, 3: Both
-    'data_for_model': 2,
+    'data_for_model': 1,
 
     # Used distance metric for the permutations
     # 1: Exact match distance

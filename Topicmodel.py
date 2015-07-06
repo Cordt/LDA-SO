@@ -150,7 +150,7 @@ class Topicmodel:
         output += '\tData used for topic model:\t\t\t\t' + used_data + '\n'
 
         # Metrics are only used for Experiment 2 and 3
-        if experiment_no != 0:
+        if experiment_no != 1:
             used_metric = ''
             if self.setting['distance_metric'] == 1:
                 used_metric = 'Exact match distance'
