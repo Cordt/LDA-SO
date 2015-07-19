@@ -9,10 +9,11 @@ import sys
 if len(sys.argv) > 1:
     theme = sys.argv[1]
 else:
-    logging.info('No theme provided')
+    print('No theme provided')
     sys.exit(0)
 
-logging.basicConfig(filename=theme + '.log', format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+logging.basicConfig(filename='/srv/cordt-mt/log/' + theme + '.log',
+                    format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
 setting = {
     'theme': theme,
