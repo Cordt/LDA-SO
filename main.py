@@ -7,13 +7,17 @@ import os
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.WARNING)
 
-theme = 'islam'
+theme = 'beer'
 setting = {
     'theme': theme,
-    'dbpath': '../../data/' + theme + '.db',
-    'resultfolder': '/Users/Cordt/Documents/results/',
 
-    'malletpath': '/usr/share/mallet-2.0.7/bin/mallet',
+    # 'dbpath': '../../data/' + theme + '.db',
+    'dbpath': '/srv/cordt-mt/data/' + theme + '.db',
+
+    # 'resultfolder': '/Users/Cordt/Documents/results/',
+    'resultfolder': '/srv/cordt-mt/results/',
+
+    'malletpath': '/usr/share/mallet-2.0.8RC2/bin/mallet',
 
     'nooftopics': 100,
     'noofwordsfortopic': 100,
@@ -40,9 +44,11 @@ setting = {
     'distance_metric': 1}
 
 if theme is 'reuters':
-    setting['folderprefix'] = '../../data/' + theme + '/'
+    # setting['folderprefix'] = '../../data/' + theme + '/'
+    setting['folderprefix'] = '/srv/cordt-mt/data/' + theme + '/'
 else:
-    setting['folderprefix'] = '../../data/' + theme + '.stackexchange.com/'
+    # setting['folderprefix'] = '../../data/' + theme + '.stackexchange.com/'
+    setting['folderprefix'] = '/srv/cordt-mt/data/' + theme + '.stackexchange.com/'
 
 
 # Topic model
