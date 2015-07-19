@@ -37,6 +37,7 @@ def exact_match_distance(score_ordered_answers, similarity_ordered_answers):
         else:
             return -1
 
+
 # Spearman's footrule
 def deviation_distance(score_ordered_answers, similarity_ordered_answers):
 
@@ -66,6 +67,7 @@ def deviation_distance(score_ordered_answers, similarity_ordered_answers):
         else:
             return -1
 
+
 def squared_deviation_distance(score_ordered_answers, similarity_ordered_answers):
 
         # score_ordered_answers - (answer ID, score)
@@ -91,3 +93,4 @@ def squared_deviation_distance(score_ordered_answers, similarity_ordered_answers
 
         else:
             return -1
+

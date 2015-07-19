@@ -5,6 +5,7 @@ import math
 import random
 import uuid
 import os
+import logging
 
 
 class Tagcloud(object):

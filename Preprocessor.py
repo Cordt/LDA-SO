@@ -3,6 +3,7 @@ __author__ = 'Cordt'
 from gensim import corpora, utils
 from HTMLParser import HTMLParser
 from BeautifulSoup import *
+import logging
 
 
 class Preprocessor:
