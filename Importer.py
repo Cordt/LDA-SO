@@ -4,6 +4,7 @@ import xml.etree.cElementTree as ElementTree
 import sqlite3
 import os.path
 import re
+import logging
 
 
 class Importer:
@@ -41,7 +42,7 @@ class Importer:
 
         self.corpus = []
 
-        print("Loading questions...")
+        logging.info("Loading questions...")
         sql = 'SELECT title, body FROM question'
         self.cursor.execute(sql)
         questions = self.cursor.fetchall()
@@ -59,7 +60,7 @@ class Importer:
 
         self.corpus = []
 
-        print("Loading answers...")
+        logging.info("Loading answers...")
         sql = 'SELECT body FROM answer'
         self.cursor.execute(sql)
         answers = self.cursor.fetchall()
@@ -73,7 +74,7 @@ class Importer:
     def _create_db(self):
         # Create tables if database does not exist yet
         if not os.path.isfile(self.setting['dbpath']):
-            print("Database does not exist yet, creating...")
+            logging.info("Database does not exist yet, creating...")
 
             # Database connection - instance variables
             self.connection = sqlite3.connect(self.setting['dbpath'])
@@ -121,7 +122,7 @@ class Importer:
             self.connection = sqlite3.connect(self.setting['dbpath'])
             self.cursor = self.connection.cursor()
 
-            print("Database already exists, connecting...")
+            logging.info("Database already exists, connecting...")
 
     def _import_posts(self):
         tree = ElementTree.parse(self.setting['folderprefix'] + 'Posts.xml')
@@ -136,10 +137,10 @@ class Importer:
         result2 = self.cursor.fetchall()
 
         if len(result) != 0 or len(result2) != 0:
-            print('Question and Answer tables not empty, adding nothing')
+            logging.info('Question and Answer tables not empty, adding nothing')
 
         else:
-            print('Importing posts into question and answer tables')
+            logging.info('Importing posts into question and answer tables')
             for row in root.findall('row'):
 
                 # Common attributes
@@ -201,10 +202,10 @@ class Importer:
         result = self.cursor.fetchall()
 
         if len(result) != 0:
-            print('Tag table not empty, adding nothing')
+            logging.info('Tag table not empty, adding nothing')
 
         else:
-            print('Importing tags into tag table')
+            logging.info('Importing tags into tag table')
             for row in root.findall('row'):
 
                 elementid = row.get('Id')
@@ -231,7 +232,7 @@ class Importer:
                 values = [questionid, tagid]
                 self.cursor.execute('INSERT INTO postTag VALUES (NULL, ?, ?)', values)
             else:
-                print('No tag record found for ', tag)
+                logging.info('No tag record found for ', tag)
 
     def _import_links(self):
         tree = ElementTree.parse(self.setting['folderprefix'] + 'PostLinks.xml')
@@ -243,10 +244,10 @@ class Importer:
         result = self.cursor.fetchall()
 
         if len(result) != 0:
-            print('PostLink table not empty, adding nothing')
+            logging.info('PostLink table not empty, adding nothing')
 
         else:
-            print('Importing links into postLink table')
+            logging.info('Importing links into postLink table')
             for row in root.findall('row'):
 
                 elementid = row.get('Id')
@@ -270,10 +271,10 @@ class Importer:
         result = self.cursor.fetchall()
 
         if len(result) != 0:
-            print('User table not empty, adding nothing')
+            logging.info('User table not empty, adding nothing')
 
         else:
-            print('Importing users into user table')
+            logging.info('Importing users into user table')
             for row in root.findall('row'):
 
                 elementid = row.get('Id')

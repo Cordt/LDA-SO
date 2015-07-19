@@ -26,7 +26,7 @@ class Tagcloud(object):
 
     @staticmethod
     def createtagcloud(topicmodel, setting):
-        print("Drawing tagcloud...")
+        logging.info("Drawing tagcloud...")
         count = 0
         directory = setting['resultfolder'] + setting['theme'] + "/tagclouds/"
         if not os.path.exists(directory):

@@ -4,10 +4,16 @@ from Topicmodel import Topicmodel
 from Tagcloud import Tagcloud
 import logging
 import os
+import sys
 
-logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.WARNING)
+if len(sys.argv) > 1:
+    theme = sys.argv[1]
+else:
+    logging.info('No theme provided')
+    sys.exit(0)
 
-theme = 'beer'
+logging.basicConfig(filename=theme + '.log', format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+
 setting = {
     'theme': theme,
 
@@ -17,7 +23,7 @@ setting = {
     # 'resultfolder': '/Users/Cordt/Documents/results/',
     'resultfolder': '/srv/cordt-mt/results/',
 
-    'malletpath': '/usr/share/mallet-2.0.8RC2/bin/mallet',
+    'malletpath': '/usr/share/mallet-2.0.7/bin/mallet',
 
     'nooftopics': 100,
     'noofwordsfortopic': 100,
@@ -30,7 +36,7 @@ setting = {
     # Filter all documents that appear in more than the given fraction of documents
     'filter_more_than_fraction_of_documents': 0.5,
 
-    'create_tag_cloud': False,
+    'create_tag_cloud': True,
     'clean_similarities_table': False,
 
     # Data used for topic model
@@ -51,31 +57,35 @@ else:
     setting['folderprefix'] = '/srv/cordt-mt/data/' + theme + '.stackexchange.com/'
 
 
-# Topic model
-tm = Topicmodel(setting)
-tm.createmodel()
+for index in range(1, 3, 1):
+    setting['data_for_model'] = index
 
-# Create tag cloud
-if setting['create_tag_cloud']:
-    Tagcloud.createtagcloud(tm, setting)
+    # Topic model
+    tm = Topicmodel(setting)
+    tm.createmodel()
 
-# Create similarities tables
-tm.determine_question_answer_distances()
+    # Create tag cloud
+    if setting['create_tag_cloud']:
+        Tagcloud.createtagcloud(tm, setting)
 
-# Create document lengths db if neccessary
-directory = setting['resultfolder'] + setting['theme'] + "/model/"
-filename = "lengths.db"
-dbpath = ''.join([directory, filename])
+    # Create similarities tables
+    tm.determine_question_answer_distances()
 
-if not os.path.isfile(dbpath):
-    print("Document lengths database does not exist yet, determining lengths and writing to database...")
-    tm.determine_answer_lengths()
+    # Create document lengths db if neccessary
+    directory = setting['resultfolder'] + setting['theme'] + "/model/"
+    filename = "lengths.db"
+    dbpath = ''.join([directory, filename])
 
-# Determine avergae distances of answers, that are related to the question
-tm.get_true_answers_distances(no_of_questions=-1)
+    if not os.path.isfile(dbpath):
+        logging.info("Document lengths database does not exist yet, determining lengths and writing to database...")
+        tm.determine_answer_lengths()
 
-# Determine the distance to the correct order of answers to a question, given by the upvote score, compared to the order
-# given by the topic model
-tm.compute_answer_order_metric(no_of_questions=-1)
+    # Determine avergae distances of answers, that are related to the question
+    tm.get_true_answers_distances(no_of_questions=-1)
 
-tm.compute_answer_length_impact(no_of_questions=-1)
+    # Determine the distance to the correct order of answers to a question, given by the upvote score,
+    # compared to the order
+    # given by the topic model
+    tm.compute_answer_order_metric(no_of_questions=-1)
+
+    tm.compute_answer_length_impact(no_of_questions=-1)

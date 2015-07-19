@@ -8,6 +8,7 @@ import Reuters
 import os
 import sys
 import sqlite3
+import logging
 
 
 class Topicmodel:
@@ -53,7 +54,7 @@ class Topicmodel:
         try:
             self.model = utils.SaveLoad.load(path)
         except IOError:
-            print("Could not load '%s', starting from scratch" % path)
+            logging.info("Could not load '%s', starting from scratch" % path)
 
         # Importing data
         self.importer = Importer(self.setting)
@@ -163,7 +164,7 @@ class Topicmodel:
         output += 'Result:\t' + str(result) + '\n'
         output += '\n####################\n\n'
 
-        print(output)
+        logging.info(output)
 
         directory = self.setting['resultfolder'] + self.setting['theme'] + "/"
         filename = self.setting['theme'] + '_' + str(experiment_no) + '.txt'
@@ -183,7 +184,7 @@ class Topicmodel:
         normalized_distance = 0.0
         average_distance = 0.0
 
-        print('Experiment #1...')
+        logging.info('Experiment #1...')
 
         # We don't count questions that do not have an answer
         actual_no_of_questions = no_of_questions + 1
@@ -225,7 +226,7 @@ class Topicmodel:
                 ratio = (float(question_id) / float(no_of_questions)) * 100.0
                 sys.stdout.write("\r\t%d%%" % ratio)
                 sys.stdout.flush()
-        print('\n\tDone.')
+        logging.info('\n\tDone.')
 
         average_distance /= float(actual_no_of_questions)
         self._print_and_write_result(1, average_distance)
@@ -236,7 +237,7 @@ class Topicmodel:
 
     def compute_answer_order_metric(self, no_of_questions=-1):
 
-        print('Experiment #2...')
+        logging.info('Experiment #2...')
 
         average_distance = 0.0
 
@@ -273,7 +274,7 @@ class Topicmodel:
                 ratio = (float(question_id) / float(no_of_questions)) * 100.0
                 sys.stdout.write("\r\t%d%%" % ratio)
                 sys.stdout.flush()
-        print('\n\tDone.')
+        logging.info('\n\tDone.')
 
         average_distance /= float(actual_no_of_questions)
         self._print_and_write_result(2, average_distance)
@@ -284,7 +285,7 @@ class Topicmodel:
 
     def compute_answer_length_impact(self, no_of_questions=-1):
 
-        print('Experiment #3...')
+        logging.info('Experiment #3...')
 
         average_answer_distance = 0.0
 
@@ -321,7 +322,7 @@ class Topicmodel:
                 ratio = (float(question_id) / float(no_of_questions)) * 100.0
                 sys.stdout.write("\r\t%d%%" % ratio)
                 sys.stdout.flush()
-        print('\n\tDone.')
+        logging.info('\n\tDone.')
 
         average_answer_distance /= float(actual_no_of_questions)
         self._print_and_write_result(3, average_answer_distance)
@@ -460,7 +461,7 @@ class Topicmodel:
         cursor.close()
 
         if len(result) != 0:
-            print('Similarities tables not empty, adding nothing')
+            logging.info('Similarities tables not empty, adding nothing')
             return
 
         # Load all question topics

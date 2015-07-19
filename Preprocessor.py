@@ -14,21 +14,21 @@ class Preprocessor:
         self.vocabulary = set
 
     def simple_clean_raw_data(self, raw_data):
-        print("Cleaning data...")
+        logging.info("Cleaning data...")
         for row in raw_data:
             tmp_text = self.strip_code_blocks(row)
             if self.setting['theme'] != 'reuters':
                 tmp_text = MLStripper.remove_tags(tmp_text)
             self.corpus.append(utils.simple_preprocess(tmp_text))
 
-        print("Removing short words...")
+        logging.info("Removing short words...")
         for (index, document) in enumerate(self.corpus):
             self.corpus[index] = self.remove_short_words(document)
 
-        print("Retrieving vocabulary...")
+        logging.info("Retrieving vocabulary...")
         self.vocabulary = corpora.Dictionary(self.corpus)
 
-        print("Removing very common and very uncommon words...")
+        logging.info("Removing very common and very uncommon words...")
         no_below = self.setting['filter_less_than_no_of_documents']
         no_above = self.setting['filter_more_than_fraction_of_documents']
         self.vocabulary.filter_extremes(no_below=no_below, no_above=no_above)
