@@ -14,6 +14,7 @@ else:
 
 logging.basicConfig(filename='/srv/cordt-mt/log/' + theme + '.log',
                     format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+# logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
 setting = {
     'theme': theme,
@@ -57,7 +58,7 @@ else:
     # setting['folderprefix'] = '../../data/' + theme + '.stackexchange.com/'
     setting['folderprefix'] = '/srv/cordt-mt/data/' + theme + '.stackexchange.com/'
 
-for mIndex in range (2, 4, 1):
+for mIndex in range(2, 4, 1):
     setting['distance_metric'] = mIndex
     for index in range(1, 4, 1):
         setting['data_for_model'] = index
