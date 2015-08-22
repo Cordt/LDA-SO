@@ -174,6 +174,43 @@ class Topicmodel:
         f.write(output)
         f.close()
 
+    def _print_precision_recall_f1(self, precision, recall, f1):
+        directory = self.setting['resultfolder'] + self.setting['theme'] + "/"
+
+        data = ""
+        if self.setting['data_for_model'] == 1:
+            data = "questions"
+
+        elif self.setting['data_for_model'] == 2:
+            data = "answers"
+
+        elif self.setting['data_for_model'] == 3:
+            data = "qanda"
+
+        precision_filename = self.setting['theme'] + '_precision_' + data + '.txt'
+        path = ''.join([directory, precision_filename])
+
+        f = open(path, "w")
+        for (index, value) in enumerate(precision):
+            f.write(str(index) + ', ' + str(value) + '\n')
+        f.close()
+
+        recall_filename = self.setting['theme'] + '_recall_' + data + '.txt'
+        path = ''.join([directory, recall_filename])
+
+        f = open(path, "w")
+        for (index, value) in enumerate(recall):
+            f.write(str(index) + ', ' + str(value) + '\n')
+        f.close()
+
+        f1_filename = self.setting['theme'] + '_f1_' + data + '.txt'
+        path = ''.join([directory, f1_filename])
+
+        f = open(path, "w")
+        for (index, value) in enumerate(f1):
+            f.write(str(index) + ', ' + str(value) + '\n')
+        f.close()
+
     ####################################################################################################
     # Calculate statistics on data - Experiment 1, actual distance to question
     ####################################################################################################
@@ -189,7 +226,18 @@ class Topicmodel:
         # We don't count questions that do not have an answer
         actual_no_of_questions = no_of_questions + 1
 
+        number_of_related_answers = None
+        if self.setting['minimum_number_of_answers'] > 0:
+            # Tuple like (question ID, number of answers)
+            number_of_related_answers = self._get_number_of_related_answers()
+
         for question_id in range(1, no_of_questions + 1):
+
+            # Omit all questions that have less the number of answers then set
+            if self.setting['minimum_number_of_answers'] > 0:
+                if number_of_related_answers[question_id - 1] < self.setting['minimum_number_of_answers']:
+                    actual_no_of_questions -= 1
+                    continue
 
             # Table similarities: [questionId, answerId, similarity], ordered by similarity, ascending
             answer_similarities = self._load_similarities_for_question(question_id)
@@ -246,7 +294,18 @@ class Topicmodel:
 
         actual_no_of_questions = no_of_questions
 
+        number_of_related_answers = None
+        if self.setting['minimum_number_of_answers'] > 0:
+            # Tuple like (question ID, number of answers)
+            number_of_related_answers = self._get_number_of_related_answers()
+
         for question_id in range(1, no_of_questions + 1):
+
+            # Omit all questions that have less the number of answers then set
+            if self.setting['minimum_number_of_answers'] > 0:
+                if number_of_related_answers[question_id - 1] < self.setting['minimum_number_of_answers']:
+                    actual_no_of_questions -= 1
+                    continue
 
             # Table similarities: (answer ID, similarity), ordered by similarity, ascending
             similarity_ordered_answers = self._load_related_answer_similarities_for_question(question_id)
@@ -294,7 +353,18 @@ class Topicmodel:
 
         actual_no_of_questions = no_of_questions
 
+        number_of_related_answers = None
+        if self.setting['minimum_number_of_answers'] > 0:
+            # Tuple like (question ID, number of answers)
+            number_of_related_answers = self._get_number_of_related_answers()
+
         for question_id in range(1, no_of_questions + 1):
+
+            # Omit all questions that have less the number of answers then set
+            if self.setting['minimum_number_of_answers'] > 0:
+                if number_of_related_answers[question_id - 1] < self.setting['minimum_number_of_answers']:
+                    actual_no_of_questions -= 1
+                    continue
 
             # Table answer: (answer ID, score), Ordered By score, descending
             score_ordered_answers = self._get_related_answer_ids(question_id, with_score=True)
@@ -326,6 +396,86 @@ class Topicmodel:
 
         average_answer_distance /= float(actual_no_of_questions)
         self._print_and_write_result(3, average_answer_distance)
+
+    ####################################################################################################
+    # Calculate statistics on data - Experiment 4, actual distance to question - precision and recall
+    ####################################################################################################
+
+    def get_precision_of_answers_distances(self, no_of_questions=-1):
+        if no_of_questions is -1:
+            no_of_questions = self._get_max_question_id()
+
+        logging.info('Experiment #4...')
+
+        precision = []
+        recall = []
+        f1 = []
+
+        # We don't count questions that do not have an answer
+        actual_no_of_questions = no_of_questions
+
+        number_of_related_answers = None
+        if self.setting['minimum_number_of_answers'] > 0:
+            # Tuple like (question ID, number of answers)
+            number_of_related_answers = self._get_number_of_related_answers()
+
+        total_number_of_answers = 0
+
+        for question_id in range(1, no_of_questions + 1):
+
+            # Omit all questions that have less the number of answers then set
+            if self.setting['minimum_number_of_answers'] > 0:
+                if number_of_related_answers[question_id - 1] < self.setting['minimum_number_of_answers']:
+                    actual_no_of_questions -= 1
+                    continue
+
+            # Table similarities: [questionId, answerId, similarity], ordered by similarity, ascending
+            answer_similarities = self._load_similarities_for_question(question_id)
+            total_number_of_answers = len(answer_similarities)
+
+            # Table answer: (id), Ordered By score, descending
+            related_answer_ids = self._get_related_answer_ids(question_id, with_score=False)
+
+            number_of_relevant_answers = 0
+
+            if len(related_answer_ids) is not 0:
+                for (answer_index, row) in enumerate(answer_similarities):
+
+                    if len(precision) == answer_index:
+                        # Append zeroes to precision and recall
+                        precision.append(float(0))
+                        recall.append(float(0))
+                        f1.append(float(0))
+
+                    # Check whether answer is one of the answers, given to this question
+                    if row[1] in related_answer_ids:
+                        number_of_relevant_answers += 1
+
+                    precision[answer_index] += (float(number_of_relevant_answers) / float(answer_index + 1))
+                    recall[answer_index] += (float(number_of_relevant_answers) / float(len(related_answer_ids)))
+
+            else:
+                actual_no_of_questions -= 1
+
+            # Print percentage of already finished questions
+            if question_id % 10 is 0:
+                ratio = (float(question_id) / float(no_of_questions)) * 100.0
+                sys.stdout.write("\r\t%d%%" % ratio)
+                sys.stdout.flush()
+
+        # Normalize precision and recall
+        for answer_index in range(0, total_number_of_answers):
+            precision[answer_index] /= float(actual_no_of_questions)
+            recall[answer_index] /= float(actual_no_of_questions)
+            if (precision[answer_index] == 0.0) and (recall[answer_index] == 0.0):
+                f1[answer_index] = 0.0
+            else:
+                f1[answer_index] = 2.0 * ((precision[answer_index] * recall[answer_index]) /
+                                          (precision[answer_index] + recall[answer_index]))
+
+        logging.info('\n\tDone.')
+
+        self._print_precision_recall_f1(precision, recall, f1)
 
     ####################################################################################################
     # Calculate statistics on data - Helper methods
@@ -437,6 +587,24 @@ class Topicmodel:
                 answer_ids.append(answer_element_id[0])
 
         return answer_ids
+
+    def _get_number_of_related_answers(self):
+        dbpath = self.setting['dbpath']
+
+        # Database connection - instance variables
+        connection = sqlite3.connect(dbpath)
+        cursor = connection.cursor()
+
+        number_of_related_answers = []
+
+        cursor.execute('SELECT id, answerCount FROM question ORDER BY score DESC')
+        result = cursor.fetchall()
+
+        for element in result:
+            # Store a tuple like (question ID, number of answers)
+            number_of_related_answers.append(element[1])
+
+        return number_of_related_answers
 
     ####################################################################################################
     # Calculate and store document similarities

@@ -12,18 +12,18 @@ else:
     print('No theme provided')
     sys.exit(0)
 
-logging.basicConfig(filename='/srv/cordt-mt/log/' + theme + '.log',
-                    format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
-# logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+# logging.basicConfig(filename='/srv/cordt-mt/log/' + theme + '.log',
+#                     format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
 setting = {
     'theme': theme,
 
-    # 'dbpath': '../../data/' + theme + '.db',
-    'dbpath': '/srv/cordt-mt/data/' + theme + '.db',
+    'dbpath': '../../data/' + theme + '.db',
+    # 'dbpath': '/srv/cordt-mt/data/' + theme + '.db',
 
-    # 'resultfolder': '/Users/Cordt/Documents/results/',
-    'resultfolder': '/srv/cordt-mt/results/',
+    'resultfolder': '/Users/Cordt/Documents/results/',
+    # 'resultfolder': '/srv/cordt-mt/results/',
 
     'malletpath': '/usr/share/mallet-2.0.7/bin/mallet',
 
@@ -49,16 +49,20 @@ setting = {
     # 1: Exact match distance
     # 2: Deviation distance
     # 3: Squared deviation distance
-    'distance_metric': 2}
+    'distance_metric': 1,
+
+    # Determines the minimum number of answers a questions has to have, to be processed
+    # -1 indicates that all questions should be considered
+    'minimum_number_of_answers': -1}
 
 if theme is 'reuters':
-    # setting['folderprefix'] = '../../data/' + theme + '/'
-    setting['folderprefix'] = '/srv/cordt-mt/data/' + theme + '/'
+    setting['folderprefix'] = '../../data/' + theme + '/'
+    # setting['folderprefix'] = '/srv/cordt-mt/data/' + theme + '/'
 else:
-    # setting['folderprefix'] = '../../data/' + theme + '.stackexchange.com/'
-    setting['folderprefix'] = '/srv/cordt-mt/data/' + theme + '.stackexchange.com/'
+    setting['folderprefix'] = '../../data/' + theme + '.stackexchange.com/'
+    # setting['folderprefix'] = '/srv/cordt-mt/data/' + theme + '.stackexchange.com/'
 
-for mIndex in range(2, 4, 1):
+for mIndex in range(1, 2, 1):
     setting['distance_metric'] = mIndex
     for index in range(1, 4, 1):
         setting['data_for_model'] = index
@@ -84,11 +88,13 @@ for mIndex in range(2, 4, 1):
             tm.determine_answer_lengths()
 
         # Determine avergae distances of answers, that are related to the question
-        tm.get_true_answers_distances(no_of_questions=-1)
+        # tm.get_true_answers_distances(no_of_questions=-1)
 
         # Determine the distance to the correct order of answers to a question, given by the upvote score,
         # compared to the order
         # given by the topic model
-        tm.compute_answer_order_metric(no_of_questions=-1)
+        # tm.compute_answer_order_metric(no_of_questions=-1)
 
-        tm.compute_answer_length_impact(no_of_questions=-1)
+        # tm.compute_answer_length_impact(no_of_questions=-1)
+
+        tm.get_precision_of_answers_distances(no_of_questions=-1)
