@@ -282,7 +282,7 @@ class Importer:
                 creationdate = row.get('CreationDate')
                 displayname = row.get('DisplayName')
                 lastaccessdate = row.get('LastAccessDate')
-                websiteurl = row.get('WebsiteUrl')
+                web^teurl = row.get('WebsiteUrl')
                 location = row.get('Location')
                 aboutme = row.get('AboutMe')
                 views = row.get('Views')
