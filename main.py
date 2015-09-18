@@ -2,6 +2,7 @@ __author__ = 'Cordt Voigt'
 
 from Topicmodel import Topicmodel
 from Tagcloud import Tagcloud
+from Tfidf import TFIDF
 import logging
 import os
 import sys
@@ -62,30 +63,30 @@ else:
     setting['folderprefix'] = '../../data/' + theme + '.stackexchange.com/'
     # setting['folderprefix'] = '/srv/cordt-mt/data/' + theme + '.stackexchange.com/'
 
-for mIndex in range(1, 2, 1):
-    setting['distance_metric'] = mIndex
-    for index in range(1, 4, 1):
-        setting['data_for_model'] = index
-
-        # Topic model
-        tm = Topicmodel(setting)
-        tm.createmodel()
-
-        # Create tag cloud
-        if setting['create_tag_cloud']:
-            Tagcloud.createtagcloud(tm, setting)
-
-        # Create similarities tables
-        tm.determine_question_answer_distances()
-
-        # Create document lengths db if neccessary
-        directory = setting['resultfolder'] + setting['theme'] + "/model/"
-        filename = "lengths.db"
-        dbpath = ''.join([directory, filename])
-
-        if not os.path.isfile(dbpath):
-            logging.info("Document lengths database does not exist yet, determining lengths and writing to database...")
-            tm.determine_answer_lengths()
+# for mIndex in range(1, 2, 1):
+#     setting['distance_metric'] = mIndex
+#     for index in range(1, 4, 1):
+        # setting['data_for_model'] = index
+        #
+        # # Topic model
+        # tm = Topicmodel(setting)
+        # tm.createmodel()
+        #
+        # # Create tag cloud
+        # if setting['create_tag_cloud']:
+        #     Tagcloud.createtagcloud(tm, setting)
+        #
+        # # Create similarities tables
+        # tm.determine_question_answer_distances()
+        #
+        # # Create document lengths db if neccessary
+        # directory = setting['resultfolder'] + setting['theme'] + "/model/"
+        # filename = "lengths.db"
+        # dbpath = ''.join([directory, filename])
+        #
+        # if not os.path.isfile(dbpath):
+        #     logging.info("Document lengths database does not exist yet, determining lengths and writing to database...")
+        #     tm.determine_answer_lengths()
 
         # Determine avergae distances of answers, that are related to the question
         # tm.get_true_answers_distances(no_of_questions=-1)
@@ -97,4 +98,7 @@ for mIndex in range(1, 2, 1):
 
         # tm.compute_answer_length_impact(no_of_questions=-1)
 
-        tm.get_precision_of_answers_distances(no_of_questions=-1)
+        # tm.get_precision_of_answers_distances(no_of_questions=-1)
+
+tfidf = TFIDF(setting)
+tfidf.get_tf_idf_precision_recall()

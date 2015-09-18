@@ -1,5 +1,3 @@
-__author__ = 'Cordt Voigt'
-
 import xml.etree.cElementTree as ElementTree
 import sqlite3
 import os.path
@@ -282,7 +280,7 @@ class Importer:
                 creationdate = row.get('CreationDate')
                 displayname = row.get('DisplayName')
                 lastaccessdate = row.get('LastAccessDate')
-                web^teurl = row.get('WebsiteUrl')
+                websiteurl = row.get('WebsiteUrl')
                 location = row.get('Location')
                 aboutme = row.get('AboutMe')
                 views = row.get('Views')

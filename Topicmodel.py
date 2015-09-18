@@ -1,8 +1,7 @@
-__author__ = 'Cordt'
-
 from gensim import models, utils
 from Importer import Importer
 from Preprocessor import Preprocessor
+from Utilities import *
 import Metric
 import Reuters
 import os
@@ -75,20 +74,20 @@ class Topicmodel:
 
             # Preprocessing data
             self.preprocessor = Preprocessor(self.setting)
-            self.preprocessor.simple_clean_raw_data(rawdata)
+            self.preprocessor.create_clean_shortened_vocabulary(rawdata)
 
         else:
             if self.setting['data_for_model'] == 1:
                 # Use only questions
                 rawdata = self.importer.get_question_corpus()
                 self.preprocessor = Preprocessor(self.setting)
-                self.preprocessor.simple_clean_raw_data(rawdata)
+                self.preprocessor.create_clean_shortened_vocabulary(rawdata)
 
             elif self.setting['data_for_model'] == 2:
                 # Use only answers
                 rawdata = self.importer.get_answer_corpus()
                 self.preprocessor = Preprocessor(self.setting)
-                self.preprocessor.simple_clean_raw_data(rawdata)
+                self.preprocessor.create_clean_shortened_vocabulary(rawdata)
 
             elif self.setting['data_for_model'] == 3:
                 # Use both, questions and answers
@@ -102,7 +101,7 @@ class Topicmodel:
                     rawdata.append(row)
 
                 self.preprocessor = Preprocessor(self.setting)
-                self.preprocessor.simple_clean_raw_data(rawdata)
+                self.preprocessor.create_clean_shortened_vocabulary(rawdata)
 
             # We need the number of questions
             self.no_of_questions = self.importer.get_number_of_questions()
@@ -110,7 +109,7 @@ class Topicmodel:
             # We need the answer corpus separately
             rawdata = self.importer.get_answer_corpus()
             self.answer_preprocessor = Preprocessor(self.setting)
-            self.answer_preprocessor.simple_clean_raw_data(rawdata)
+            self.answer_preprocessor.create_clean_shortened_vocabulary(rawdata)
 
     def _learnmodel(self):
         self.model = models.wrappers.LdaMallet(self.mallet_path, self, num_topics=self.nooftopics,
@@ -216,8 +215,10 @@ class Topicmodel:
     ####################################################################################################
 
     def get_true_answers_distances(self, no_of_questions=-1):
+        result_folder_path = self.setting['resultfolder'] + self.setting['theme']
+        theme_dbpath = self.setting['dbpath']
         if no_of_questions is -1:
-            no_of_questions = self._get_max_question_id()
+            no_of_questions = get_max_question_id(result_folder_path, self.sim_tablename)
         normalized_distance = 0.0
         average_distance = 0.0
 
@@ -229,7 +230,7 @@ class Topicmodel:
         number_of_related_answers = None
         if self.setting['minimum_number_of_answers'] > 0:
             # Tuple like (question ID, number of answers)
-            number_of_related_answers = self._get_number_of_related_answers()
+            number_of_related_answers = get_number_of_related_answers(theme_dbpath)
 
         for question_id in range(1, no_of_questions + 1):
 
@@ -240,10 +241,11 @@ class Topicmodel:
                     continue
 
             # Table similarities: [questionId, answerId, similarity], ordered by similarity, ascending
-            answer_similarities = self._load_similarities_for_question(question_id)
+
+            answer_similarities = load_similarities_for_question(result_folder_path, self.sim_tablename, question_id)
 
             # Table answer: (id), Ordered By score, descending
-            related_answer_ids = self._get_related_answer_ids(question_id, with_score=False)
+            related_answer_ids = get_related_answer_ids(theme_dbpath, question_id, with_score=False)
 
             # The actual_answer_index and the actual_total_number_of_answers make sure that the
             # metric is normalized from 0 to 1
@@ -284,20 +286,22 @@ class Topicmodel:
     ####################################################################################################
 
     def compute_answer_order_metric(self, no_of_questions=-1):
+        result_folder_path = self.setting['resultfolder'] + self.setting['theme'] + "/model/"
+        theme_dbpath = self.setting['dbpath']
 
         logging.info('Experiment #2...')
 
         average_distance = 0.0
 
         if no_of_questions == -1:
-            no_of_questions = self._get_max_question_id()
+            no_of_questions = get_max_question_id(result_folder_path, self.sim_tablename)
 
         actual_no_of_questions = no_of_questions
 
         number_of_related_answers = None
         if self.setting['minimum_number_of_answers'] > 0:
             # Tuple like (question ID, number of answers)
-            number_of_related_answers = self._get_number_of_related_answers()
+            number_of_related_answers = get_number_of_related_answers(theme_dbpath)
 
         for question_id in range(1, no_of_questions + 1):
 
@@ -308,10 +312,12 @@ class Topicmodel:
                     continue
 
             # Table similarities: (answer ID, similarity), ordered by similarity, ascending
-            similarity_ordered_answers = self._load_related_answer_similarities_for_question(question_id)
+            similarity_ordered_answers = load_related_answer_similarities_for_question(
+                theme_dbpath, result_folder_path, self.sim_tablename, question_id)
 
             # Table answer: (answer ID, score), Ordered By score, descending
-            score_ordered_answers = self._get_related_answer_ids(question_id, with_score=True)
+            theme_dbpath = self.setting['dbpath']
+            score_ordered_answers = get_related_answer_ids(theme_dbpath, question_id, with_score=True)
 
             distance = 0.0
 
@@ -343,20 +349,22 @@ class Topicmodel:
     ####################################################################################################
 
     def compute_answer_length_impact(self, no_of_questions=-1):
+        result_folder_path = self.setting['resultfolder'] + self.setting['theme'] + "/model/"
+        theme_dbpath = self.setting['dbpath']
 
         logging.info('Experiment #3...')
 
         average_answer_distance = 0.0
 
         if no_of_questions == -1:
-            no_of_questions = self._get_max_question_id()
+            no_of_questions = get_max_question_id(result_folder_path, self.sim_tablename)
 
         actual_no_of_questions = no_of_questions
 
         number_of_related_answers = None
         if self.setting['minimum_number_of_answers'] > 0:
             # Tuple like (question ID, number of answers)
-            number_of_related_answers = self._get_number_of_related_answers()
+            number_of_related_answers = get_number_of_related_answers(theme_dbpath)
 
         for question_id in range(1, no_of_questions + 1):
 
@@ -367,10 +375,10 @@ class Topicmodel:
                     continue
 
             # Table answer: (answer ID, score), Ordered By score, descending
-            score_ordered_answers = self._get_related_answer_ids(question_id, with_score=True)
+            score_ordered_answers = get_related_answer_ids(theme_dbpath, question_id, with_score=True)
 
             # Table lengths: (answer ID, length), Ordered By length, descending
-            length_ordered_answers = self._load_related_answer_lengths(question_id)
+            length_ordered_answers = load_related_answer_lengths(theme_dbpath, result_folder_path, question_id)
 
             distance = 0.0
 
@@ -402,8 +410,10 @@ class Topicmodel:
     ####################################################################################################
 
     def get_precision_of_answers_distances(self, no_of_questions=-1):
+        result_folder_path = self.setting['resultfolder'] + self.setting['theme'] + "/model/"
+        theme_dbpath = self.setting['dbpath']
         if no_of_questions is -1:
-            no_of_questions = self._get_max_question_id()
+            no_of_questions = get_max_question_id(result_folder_path, self.sim_tablename)
 
         logging.info('Experiment #4...')
 
@@ -417,7 +427,7 @@ class Topicmodel:
         number_of_related_answers = None
         if self.setting['minimum_number_of_answers'] > 0:
             # Tuple like (question ID, number of answers)
-            number_of_related_answers = self._get_number_of_related_answers()
+            number_of_related_answers = get_number_of_related_answers(theme_dbpath)
 
         total_number_of_answers = 0
 
@@ -430,11 +440,13 @@ class Topicmodel:
                     continue
 
             # Table similarities: [questionId, answerId, similarity], ordered by similarity, ascending
-            answer_similarities = self._load_similarities_for_question(question_id)
+            directory = self.setting['resultfolder'] + self.setting['theme'] + "/model/"
+            answer_similarities = load_similarities_for_question(directory, self.sim_tablename, question_id)
             total_number_of_answers = len(answer_similarities)
 
             # Table answer: (id), Ordered By score, descending
-            related_answer_ids = self._get_related_answer_ids(question_id, with_score=False)
+            theme_dbpath = self.setting['dbpath']
+            related_answer_ids = get_related_answer_ids(theme_dbpath, question_id, with_score=False)
 
             number_of_relevant_answers = 0
 
@@ -476,135 +488,6 @@ class Topicmodel:
         logging.info('\n\tDone.')
 
         self._print_precision_recall_f1(precision, recall, f1)
-
-    ####################################################################################################
-    # Calculate statistics on data - Helper methods
-    ####################################################################################################
-
-    def _load_similarities_for_question(self, question_id):
-        directory = self.setting['resultfolder'] + self.setting['theme'] + "/model/"
-        filename = "similarities.db"
-        dbpath = ''.join([directory, filename])
-
-        # Database connection - instance variables
-        connection = sqlite3.connect(dbpath)
-        cursor = connection.cursor()
-
-        values = [question_id]
-        # The smaller the closer --> ascending
-        cursor.execute('SELECT questionId, answerId, similarity FROM ' + self.sim_tablename + ' WHERE questionId=? '
-                       'ORDER BY similarity ASC', values)
-
-        return cursor.fetchall()
-
-    def _load_related_answer_similarities_for_question(self, question_id):
-        directory = self.setting['resultfolder'] + self.setting['theme'] + "/model/"
-        filename = "similarities.db"
-        dbpath = ''.join([directory, filename])
-
-        # Database connection - instance variables
-        connection = sqlite3.connect(dbpath)
-        cursor = connection.cursor()
-
-        related_answers_ids = self._get_related_answer_ids(question_id, with_score=False)
-        related_answers_id_strings = []
-        for element in related_answers_ids:
-            related_answers_id_strings.append(str(element))
-        tmp_string = ','.join(related_answers_id_strings)
-
-        # The smaller the closer --> ascending
-        cursor.execute('SELECT answerId, similarity FROM ' + self.sim_tablename +
-                       ' WHERE questionId=' + str(question_id) + ' AND answerId IN (' + tmp_string +
-                       ') ORDER BY similarity ASC')
-
-        result = cursor.fetchall()
-        related_answer_similarities = []
-        for row in result:
-            # Store a tuple like (answer ID, similarity)
-            related_answer_similarities.append((row[0], row[1]))
-
-        return related_answer_similarities
-
-    def _load_related_answer_lengths(self, question_id):
-        directory = self.setting['resultfolder'] + self.setting['theme'] + "/model/"
-        filename = "lenghts.db"
-        dbpath = ''.join([directory, filename])
-
-        # Database connection - instance variables
-        connection = sqlite3.connect(dbpath)
-        cursor = connection.cursor()
-
-        related_answers_ids = self._get_related_answer_ids(question_id, with_score=False)
-        related_answers_id_strings = []
-        for element in related_answers_ids:
-            related_answers_id_strings.append(str(element))
-        tmp_string = ','.join(related_answers_id_strings)
-
-        # The smaller the closer --> ascending
-        cursor.execute('SELECT answerId, length FROM `lengths` WHERE '
-                       'answerId IN (' + tmp_string + ') ORDER BY length DESC')
-
-        result = cursor.fetchall()
-        related_answer_lenghts = []
-        for row in result:
-            # Store a tuple like (answer ID, length)
-            related_answer_lenghts.append((row[0], row[1]))
-
-        return related_answer_lenghts
-
-    def _get_max_question_id(self):
-        directory = self.setting['resultfolder'] + self.setting['theme'] + "/model/"
-        filename = "similarities.db"
-        dbpath = ''.join([directory, filename])
-
-        # Database connection - instance variables
-        connection = sqlite3.connect(dbpath)
-        cursor = connection.cursor()
-
-        cursor.execute('SELECT MAX(questionId) FROM ' + self.sim_tablename)
-        return cursor.fetchone()[0]
-
-    def _get_related_answer_ids(self, question_id, with_score=False):
-        dbpath = self.setting['dbpath']
-
-        # Database connection - instance variables
-        connection = sqlite3.connect(dbpath)
-        cursor = connection.cursor()
-
-        answer_ids = []
-
-        # Get the related answers and their scores
-        values = [question_id]
-        cursor.execute('SELECT id, score FROM answer WHERE questionId=? ORDER BY score DESC', values)
-        related_answer_element_ids = cursor.fetchall()
-
-        # Translate answer element ID's to ID's
-        for answer_element_id in related_answer_element_ids:
-            if with_score:
-                # Store a tuple like (answer ID, score)
-                answer_ids.append((answer_element_id[0], answer_element_id[1]))
-            else:
-                answer_ids.append(answer_element_id[0])
-
-        return answer_ids
-
-    def _get_number_of_related_answers(self):
-        dbpath = self.setting['dbpath']
-
-        # Database connection - instance variables
-        connection = sqlite3.connect(dbpath)
-        cursor = connection.cursor()
-
-        number_of_related_answers = []
-
-        cursor.execute('SELECT id, answerCount FROM question ORDER BY score DESC')
-        result = cursor.fetchall()
-
-        for element in result:
-            # Store a tuple like (question ID, number of answers)
-            number_of_related_answers.append(element[1])
-
-        return number_of_related_answers
 
     ####################################################################################################
     # Calculate and store document similarities

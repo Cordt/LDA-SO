@@ -1,5 +1,3 @@
-__author__ = 'Cordt'
-
 from gensim import corpora, utils
 from HTMLParser import HTMLParser
 from BeautifulSoup import *
@@ -14,7 +12,7 @@ class Preprocessor:
         self.corpus = []
         self.vocabulary = set
 
-    def simple_clean_raw_data(self, raw_data):
+    def create_clean_shortened_vocabulary(self, raw_data):
         logging.info("Cleaning data...")
         for row in raw_data:
             tmp_text = self.strip_code_blocks(row)
@@ -33,6 +31,23 @@ class Preprocessor:
         no_below = self.setting['filter_less_than_no_of_documents']
         no_above = self.setting['filter_more_than_fraction_of_documents']
         self.vocabulary.filter_extremes(no_below=no_below, no_above=no_above)
+
+    def create_clean_corpus(self, raw_data):
+        logging.info("Cleaning data...")
+        for row in raw_data:
+            tmp_text = self.strip_code_blocks(row)
+            self.corpus.append(utils.simple_preprocess(tmp_text))
+
+        logging.info("Removing short words...")
+        for (index, document) in enumerate(self.corpus):
+            self.corpus[index] = self.remove_short_words(document)
+
+    @staticmethod
+    def get_dictionary_from_corpora(corpuses):
+        combined_corpora = []
+        for corpus in corpuses:
+            combined_corpora += corpus
+        return corpora.Dictionary(combined_corpora)
 
     @staticmethod
     def strip_code_blocks(text):
