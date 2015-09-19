@@ -21,8 +21,7 @@ def load_similarities_for_question(result_folder_path, similarity_tablename, que
     return cursor.fetchall()
 
 
-def load_related_answer_similarities_for_question(theme_dbpath, result_folder_path, similarity_tablename,
-                                                   question_id):
+def load_related_answer_similarities_for_question(theme_dbpath, result_folder_path, similarity_tablename, question_id):
     filename = "/model/similarities.db"
     dbpath = ''.join([result_folder_path, filename])
 
@@ -30,7 +29,7 @@ def load_related_answer_similarities_for_question(theme_dbpath, result_folder_pa
     connection = sqlite3.connect(dbpath)
     cursor = connection.cursor()
 
-    related_answers_ids = _get_related_answer_ids(theme_dbpath, question_id, with_score=False)
+    related_answers_ids = get_related_answer_ids(theme_dbpath, question_id, with_score=False)
     related_answers_id_strings = []
     for element in related_answers_ids:
         related_answers_id_strings.append(str(element))
@@ -58,7 +57,7 @@ def load_related_answer_lengths(theme_dbpath, result_folder_path, question_id):
     connection = sqlite3.connect(dbpath)
     cursor = connection.cursor()
 
-    related_answers_ids = _get_related_answer_ids(theme_dbpath, question_id, with_score=False)
+    related_answers_ids = get_related_answer_ids(theme_dbpath, question_id, with_score=False)
     related_answers_id_strings = []
     for element in related_answers_ids:
         related_answers_id_strings.append(str(element))
@@ -128,3 +127,45 @@ def get_number_of_related_answers(theme_dbpath):
         number_of_related_answers.append(element[1])
 
     return number_of_related_answers
+
+
+def create_clean_similarities_table(result_folder_path, similarities_table_name, clean=False):
+    filename = "/model/similarities.db"
+    dbpath = ''.join([result_folder_path, filename])
+
+    # Database connection - instance variables
+    connection = sqlite3.connect(dbpath)
+    cursor = connection.cursor()
+
+    # Drop table if required
+    if clean:
+        sql = 'DROP TABLE IF EXISTS ' + similarities_table_name
+        cursor.execute(sql)
+
+    sql = 'CREATE TABLE IF NOT EXISTS ' + similarities_table_name + \
+          ' (questionId int, answerId int, similarity real, ' \
+          'PRIMARY KEY (questionId, answerId))'
+    print(dbpath)
+    print(sql)
+    cursor.execute(sql)
+
+
+def write_similarities_to_db(result_folder_path, similarities_table_name, similarities):
+    filename = "/model/similarities.db"
+    dbpath = ''.join([result_folder_path, filename])
+
+    # Database connection - instance variables
+    connection = sqlite3.connect(dbpath)
+    cursor = connection.cursor()
+
+    values = []
+    for (question_id, answer_id, similarity) in similarities:
+        values.append((question_id, answer_id, similarity))
+
+    cursor.executemany('INSERT INTO ' + similarities_table_name + ' VALUES (?, ?, ?)', values)
+
+    connection.commit()
+
+
+def sorted_similarity_list(similarities):
+    return sorted(similarities, key=lambda similarity: similarity[2])

@@ -494,15 +494,16 @@ class Topicmodel:
     ####################################################################################################
 
     def determine_question_answer_distances(self, no_of_answers=-1):
+        result_folder_path = self.setting['resultfolder'] + self.setting['theme']
         similarities = []
 
         # Remove current similarities table, if any
-        self._create_clean_similarities_table()
+        create_clean_similarities_table(result_folder_path, self.sim_tablename,
+                                        self.setting['clean_similarities_table'])
 
         # Insert data if table not empty
-        directory = self.setting['resultfolder'] + self.setting['theme'] + "/model/"
-        filename = "similarities.db"
-        dbpath = ''.join([directory, filename])
+        filename = "/model/similarities.db"
+        dbpath = ''.join([result_folder_path, filename])
         connection = sqlite3.connect(dbpath)
         cursor = connection.cursor()
 
@@ -533,7 +534,7 @@ class Topicmodel:
                 similarities.append((question_index, answer_index, self._compare_documents(question_topic,
                                                                                            answer_topics)))
 
-            self._write_similarities_to_db(similarities)
+            write_similarities_to_db(result_folder_path, self.sim_tablename, similarities)
             similarities = []
 
             doc_count += 1
@@ -551,45 +552,6 @@ class Topicmodel:
         for (topic, weight) in second_document:
             second_topic_description.append(weight)
         return Metric.js_distance(first_topic_description, second_topic_description)
-
-    def _create_clean_similarities_table(self):
-        directory = self.setting['resultfolder'] + self.setting['theme'] + "/model/"
-        filename = "similarities.db"
-        dbpath = ''.join([directory, filename])
-
-        # Database connection - instance variables
-        connection = sqlite3.connect(dbpath)
-        cursor = connection.cursor()
-
-        # Drop table if required
-        if self.setting['clean_similarities_table']:
-            sql = 'DROP TABLE IF EXISTS ' + self.sim_tablename
-            cursor.execute(sql)
-
-        sql = 'CREATE TABLE IF NOT EXISTS ' + self.sim_tablename + ' (questionId int, answerId int, similarity real, ' \
-              'PRIMARY KEY (questionId, answerId))'
-        cursor.execute(sql)
-
-    def _write_similarities_to_db(self, similarities):
-        directory = self.setting['resultfolder'] + self.setting['theme'] + "/model/"
-        filename = "similarities.db"
-        dbpath = ''.join([directory, filename])
-
-        # Database connection - instance variables
-        connection = sqlite3.connect(dbpath)
-        cursor = connection.cursor()
-
-        values = []
-        for (question_id, answer_id, similarity) in similarities:
-            values.append((question_id, answer_id, similarity))
-
-        cursor.executemany('INSERT INTO ' + self.sim_tablename + ' VALUES (?, ?, ?)', values)
-
-        connection.commit()
-
-    @staticmethod
-    def sorted_similarity_list(similarities):
-        return sorted(similarities, key=lambda similarity: similarity[2])
 
     ####################################################################################################
     # Calculate and store document lenghts

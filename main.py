@@ -101,4 +101,8 @@ else:
         # tm.get_precision_of_answers_distances(no_of_questions=-1)
 
 tfidf = TFIDF(setting)
-tfidf.get_tf_idf_precision_recall()
+
+# Get similarities
+tfidf.determine_tf_idf_similarities()
+
+tfidf.get_tf_idf_precision_recall(no_of_questions=-1)
