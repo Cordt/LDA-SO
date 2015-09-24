@@ -71,6 +71,7 @@ class TFIDF:
         result_folder_path = self.setting['resultfolder'] + self.setting['theme']
         theme_dbpath = self.setting['dbpath']
         if no_of_questions is -1:
+            # IDs start from 1, so we need to add 1 to get the total number of questions
             no_of_questions = get_max_question_id(result_folder_path, self.sim_tablename)
 
         logging.info('Experiment #5...')
@@ -96,9 +97,11 @@ class TFIDF:
                     actual_no_of_questions -= 1
                     continue
 
-            # Table similarities: [questionId, answerId, similarity], ordered by similarity, ascending
-            answer_similarities = load_similarities_for_question(result_folder_path, self.sim_tablename, question_id)
+            # Table similarities: [questionId, answerId, similarity], ordered by similarity, DESCENDING
+            answer_similarities = load_similarities_for_question(result_folder_path, self.sim_tablename, question_id,
+                                                                 False)
             total_number_of_answers = len(answer_similarities)
+
 
             # Table answer: (id), Ordered By score, descending
             theme_dbpath = self.setting['dbpath']
@@ -172,7 +175,7 @@ class TFIDF:
 
                 # Cosine similartity
                 sim = float(dot(question_vector, answer_vector) / (norm(question_vector) * norm(answer_vector)))
-                similarities.append((question_index, answer_index, sim))
+                similarities.append((question_index + 1, answer_index + 1, sim))
 
             write_similarities_to_db(result_folder_path, self.sim_tablename, similarities)
             similarities = []
@@ -209,6 +212,8 @@ class TFIDF:
                 ratio = (float(question_index) / float(len(q_corpus))) * 100.0
                 sys.stdout.write("\r\t%d%%" % ratio)
                 sys.stdout.flush()
+
+        print(len(self.question_vectors))
 
         logging.info('\n\tDone.')
 

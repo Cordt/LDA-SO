@@ -5,7 +5,7 @@ import sqlite3
 ####################################################################################################
 
 
-def load_similarities_for_question(result_folder_path, similarity_tablename, question_id):
+def load_similarities_for_question(result_folder_path, similarity_tablename, question_id, ordered_ascending=True):
     filename = "/model/similarities.db"
     dbpath = ''.join([result_folder_path, filename])
 
@@ -14,9 +14,14 @@ def load_similarities_for_question(result_folder_path, similarity_tablename, que
     cursor = connection.cursor()
 
     values = [question_id]
-    # The smaller the closer --> ascending
-    cursor.execute('SELECT questionId, answerId, similarity FROM ' + similarity_tablename + ' WHERE questionId=? '
-                   'ORDER BY similarity ASC', values)
+    if ordered_ascending:
+        # The smaller the closer --> ascending
+        cursor.execute('SELECT questionId, answerId, similarity FROM ' +
+                       similarity_tablename + ' WHERE questionId=? ORDER BY similarity ASC', values)
+    else:
+        # The larger the closer --> descending
+        cursor.execute('SELECT questionId, answerId, similarity FROM ' +
+                       similarity_tablename + ' WHERE questionId=? ORDER BY similarity DESC', values)
 
     return cursor.fetchall()
 
@@ -35,10 +40,11 @@ def load_related_answer_similarities_for_question(theme_dbpath, result_folder_pa
         related_answers_id_strings.append(str(element))
     tmp_string = ','.join(related_answers_id_strings)
 
+    sql = 'SELECT answerId, similarity FROM ' + similarity_tablename + ' WHERE questionId=' + \
+          str(question_id) + ' AND answerId IN (' + tmp_string + ') ORDER BY similarity ASC'
+
     # The smaller the closer --> ascending
-    cursor.execute('SELECT answerId, similarity FROM ' + similarity_tablename +
-                   ' WHERE questionId=' + str(question_id) + ' AND answerId IN (' + tmp_string +
-                   ') ORDER BY similarity ASC')
+    cursor.execute(sql)
 
     result = cursor.fetchall()
     related_answer_similarities = []
@@ -145,8 +151,6 @@ def create_clean_similarities_table(result_folder_path, similarities_table_name,
     sql = 'CREATE TABLE IF NOT EXISTS ' + similarities_table_name + \
           ' (questionId int, answerId int, similarity real, ' \
           'PRIMARY KEY (questionId, answerId))'
-    print(dbpath)
-    print(sql)
     cursor.execute(sql)
 
 
