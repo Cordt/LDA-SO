@@ -28,10 +28,13 @@ class TFIDF:
         # Preprocess data
         self._loadandpreprocess_corpus()
 
-    def _print_precision_recall(self, precision, recall):
+    def _print_precision_recall(self, precision, recall, with_lda=False):
         directory = self.setting['resultfolder'] + self.setting['theme'] + "/"
 
-        precision_filename = self.setting['theme'] + '_precision_tf-idf.txt'
+        if with_lda:
+            precision_filename = self.setting['theme'] + '_precision_tf-idf_lda.txt'
+        else:
+            precision_filename = self.setting['theme'] + '_precision_tf-idf.txt'
         path = ''.join([directory, precision_filename])
 
         f = open(path, "w")
@@ -39,13 +42,16 @@ class TFIDF:
             f.write(str(index) + ', ' + str(value) + '\n')
         f.close()
 
-        recall_filename = self.setting['theme'] + '_recall_tf-idf.txt'
+        if with_lda:
+            recall_filename = self.setting['theme'] + '_recall_tf-idf_lda.txt'
+        else:
+            recall_filename = self.setting['theme'] + '_recall_tf-idf.txt'
         path = ''.join([directory, recall_filename])
 
         f = open(path, "w")
         for (index, value) in enumerate(recall):
             f.write(str(index) + ', ' + str(value) + '\n')
-        # f.close()
+        f.close()
 
     ####################################################################################################
     # Load data and preprocess corpus
@@ -67,7 +73,7 @@ class TFIDF:
     # Calculate statistics on data - Experiment 5, IR as in #1, but using TF-IDF
     ####################################################################################################
 
-    def get_tf_idf_precision_recall(self, no_of_questions):
+    def get_tf_idf_precision_recall(self, no_of_questions, with_lda=False):
         result_folder_path = self.setting['resultfolder'] + self.setting['theme']
         theme_dbpath = self.setting['dbpath']
         if no_of_questions is -1:
@@ -97,11 +103,26 @@ class TFIDF:
                     actual_no_of_questions -= 1
                     continue
 
-            # Table similarities: [questionId, answerId, similarity], ordered by similarity, DESCENDING
-            answer_similarities = load_similarities_for_question(result_folder_path, self.sim_tablename, question_id,
-                                                                 False)
-            total_number_of_answers = len(answer_similarities)
+            # If augmented with LDA recalculate similarities
+            if with_lda:
+                # Table similarities: [questionId, answerId, similarity], ordered by questionId, ASCENDING
+                lda_similarities = load_similarities_for_question(result_folder_path, "corpus_similarities",
+                                                                  question_id, True, order_by='questionId')
+                tfidf_similarities = load_similarities_for_question(result_folder_path, self.sim_tablename,
+                                                                    question_id, True, order_by='questionId')
+                answer_similarities = []
+                for (index, similarity) in enumerate(lda_similarities):
+                    new_similarity = ((1 - self.setting['tf-idf-proportion']) * (1 - similarity[2]) +
+                                      self.setting['tf-idf-proportion'] *
+                                      tfidf_similarities[index][2])
+                    answer_similarities.append([similarity[0], similarity[1], new_similarity])
+                answer_similarities.sort(key=lambda sim: sim[2], reverse=True)
+            else:
+                # Table similarities: [questionId, answerId, similarity], ordered by similarity, DESCENDING
+                answer_similarities = load_similarities_for_question(result_folder_path, self.sim_tablename,
+                                                                     question_id, False)
 
+            total_number_of_answers = len(answer_similarities)
 
             # Table answer: (id), Ordered By score, descending
             theme_dbpath = self.setting['dbpath']
@@ -140,7 +161,10 @@ class TFIDF:
 
         logging.info('\n\tDone.')
 
-        self._print_precision_recall(precision, recall)
+        if with_lda:
+            self._print_precision_recall(precision, recall, with_lda=True)
+        else:
+            self._print_precision_recall(precision, recall)
 
     def determine_tf_idf_similarities(self):
         result_folder_path = self.setting['resultfolder'] + self.setting['theme']

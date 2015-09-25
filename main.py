@@ -54,7 +54,11 @@ setting = {
 
     # Determines the minimum number of answers a questions has to have, to be processed
     # -1 indicates that all questions should be considered
-    'minimum_number_of_answers': -1}
+    'minimum_number_of_answers': -1,
+
+    # How strong is the influence of the TF-IDF result for the combined experiment
+    'tf-idf-proportion': 0.8
+}
 
 if theme is 'reuters':
     setting['folderprefix'] = '../../data/' + theme + '/'
@@ -105,4 +109,5 @@ tfidf = TFIDF(setting)
 # Get similarities
 tfidf.determine_tf_idf_similarities()
 
-tfidf.get_tf_idf_precision_recall(no_of_questions=-1)
+setting['tf-idf-proportion'] = 0.05
+tfidf.get_tf_idf_precision_recall(no_of_questions=-1, with_lda=True)

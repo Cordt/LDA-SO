@@ -5,7 +5,8 @@ import sqlite3
 ####################################################################################################
 
 
-def load_similarities_for_question(result_folder_path, similarity_tablename, question_id, ordered_ascending=True):
+def load_similarities_for_question(result_folder_path, similarity_tablename, question_id, ordered_ascending=True,
+                                   order_by='similarity'):
     filename = "/model/similarities.db"
     dbpath = ''.join([result_folder_path, filename])
 
@@ -17,11 +18,11 @@ def load_similarities_for_question(result_folder_path, similarity_tablename, que
     if ordered_ascending:
         # The smaller the closer --> ascending
         cursor.execute('SELECT questionId, answerId, similarity FROM ' +
-                       similarity_tablename + ' WHERE questionId=? ORDER BY similarity ASC', values)
+                       similarity_tablename + ' WHERE questionId=? ORDER BY ' + order_by + ' ASC', values)
     else:
         # The larger the closer --> descending
         cursor.execute('SELECT questionId, answerId, similarity FROM ' +
-                       similarity_tablename + ' WHERE questionId=? ORDER BY similarity DESC', values)
+                       similarity_tablename + ' WHERE questionId=? ORDER BY ' + order_by + ' DESC', values)
 
     return cursor.fetchall()
 
