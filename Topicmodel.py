@@ -286,7 +286,7 @@ class Topicmodel:
     ####################################################################################################
 
     def compute_answer_order_metric(self, no_of_questions=-1):
-        result_folder_path = self.setting['resultfolder'] + self.setting['theme'] + "/model/"
+        result_folder_path = self.setting['resultfolder'] + self.setting['theme']
         theme_dbpath = self.setting['dbpath']
 
         logging.info('Experiment #2...')
@@ -349,7 +349,7 @@ class Topicmodel:
     ####################################################################################################
 
     def compute_answer_length_impact(self, no_of_questions=-1):
-        result_folder_path = self.setting['resultfolder'] + self.setting['theme'] + "/model/"
+        result_folder_path = self.setting['resultfolder'] + self.setting['theme']
         theme_dbpath = self.setting['dbpath']
 
         logging.info('Experiment #3...')
@@ -410,7 +410,7 @@ class Topicmodel:
     ####################################################################################################
 
     def get_precision_of_answers_distances(self, no_of_questions=-1):
-        result_folder_path = self.setting['resultfolder'] + self.setting['theme'] + "/model/"
+        result_folder_path = self.setting['resultfolder'] + self.setting['theme']
         theme_dbpath = self.setting['dbpath']
         if no_of_questions is -1:
             no_of_questions = get_max_question_id(result_folder_path, self.sim_tablename)
@@ -440,8 +440,7 @@ class Topicmodel:
                     continue
 
             # Table similarities: [questionId, answerId, similarity], ordered by similarity, ascending
-            directory = self.setting['resultfolder'] + self.setting['theme'] + "/model/"
-            answer_similarities = load_similarities_for_question(directory, self.sim_tablename, question_id)
+            answer_similarities = load_similarities_for_question(result_folder_path, self.sim_tablename, question_id)
             total_number_of_answers = len(answer_similarities)
 
             # Table answer: (id), Ordered By score, descending

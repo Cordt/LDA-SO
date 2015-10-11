@@ -139,7 +139,7 @@ def get_number_of_related_answers(theme_dbpath):
 def create_clean_similarities_table(result_folder_path, similarities_table_name, clean=False):
     filename = "/model/similarities.db"
     dbpath = ''.join([result_folder_path, filename])
-
+    print(dbpath)
     # Database connection - instance variables
     connection = sqlite3.connect(dbpath)
     cursor = connection.cursor()
